@@ -1,0 +1,224 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model logmasuk {
+  id            Int
+  firstname     String?   @db.VarChar(100)
+  lastname      String?   @db.VarChar(100)
+  email         String?   @db.VarChar(50)
+  level         Float?
+  locationname  String?   @db.VarChar(100)
+  locationcode  String?   @db.VarChar(100)
+  datelogin     DateTime? @db.Date
+  datetimelogin DateTime? @db.DateTime(0)
+  ip            String?   @db.VarChar(50)
+
+  @@ignore
+}
+
+model owners {
+  owner_id      Int      @id @default(autoincrement())
+  nama_owner    String   @db.VarChar(100)
+  email         String   @unique(map: "email") @db.VarChar(100)
+  password      String   @db.VarChar(255)
+  no_hp         String   @db.VarChar(15)
+  domain        String   @db.VarChar(255)
+  database_name String   @db.VarChar(100)
+  created_at    DateTime @default(now()) @db.Timestamp(0)
+}
+
+model paket_internet {
+  paket_id   Int         @id @default(autoincrement())
+  nama_paket String      @db.VarChar(100)
+  kecepatan  String?     @db.VarChar(50)
+  harga      Decimal     @db.Decimal(10, 2)
+  deskripsi  String?     @db.Text
+  is_active  Boolean?    @default(true)
+  created_at DateTime    @default(now()) @db.Timestamp(0)
+  updated_at DateTime    @default(now()) @db.Timestamp(0)
+  pelanggan  pelanggan[]
+}
+
+model pelanggan {
+  pelanggan_id   Int               @id @default(autoincrement())
+  nama_pelanggan String            @db.VarChar(100)
+  alamat         String            @db.Text
+  latitude       String            @db.VarChar(20)
+  longitude      String            @db.VarChar(20)
+  map_url        String?           @db.Text
+  telepon        String            @db.VarChar(15)
+  email          String            @db.VarChar(100)
+  paket_id       Int
+  status         pelanggan_status? @default(Aktif)
+  tanggal_daftar DateTime          @db.Date
+  created_at     DateTime?         @default(now()) @db.DateTime(0)
+  updated_at     DateTime?         @default(now()) @db.DateTime(0)
+  paket_internet paket_internet    @relation(fields: [paket_id], references: [paket_id], onDelete: Cascade, onUpdate: Restrict, map: "pelanggan_ibfk_1")
+
+  @@index([paket_id], map: "paket_id")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model profil_aplikasi {
+  id               Int
+  nama_aplikasi    String    @db.VarChar(100)
+  versi_aplikasi   String?   @default("1.0") @db.VarChar(10)
+  alamat_aplikasi  String?   @db.Text
+  kontak_aplikasi  String?   @db.VarChar(50)
+  website_aplikasi String?   @db.VarChar(100)
+  deskripsi        String?   @db.Text
+  logo_aplikasi    String?   @db.VarChar(255)
+  tanggal_dibuat   DateTime? @default(now()) @db.DateTime(0)
+  tanggal_diupdate DateTime? @default(now()) @db.DateTime(0)
+
+  @@ignore
+}
+
+model satuan {
+  id          Int              @id @default(autoincrement())
+  nama_satuan String           @db.VarChar(50)
+  is_active   satuan_is_active @default(dbgenerated("1"))
+  created_at  DateTime         @default(now()) @db.Timestamp(0)
+  updated_at  DateTime         @default(now()) @db.Timestamp(0)
+}
+
+model settings {
+  id            Int            @id @default(autoincrement())
+  nama_aplikasi String         @db.VarChar(100)
+  alamat        String         @db.Text
+  keterangan    String?        @db.Text
+  logo          String?        @db.VarChar(255)
+  created_at    DateTime?      @default(now()) @db.DateTime(0)
+  updated_at    DateTime?      @default(now()) @db.DateTime(0)
+  level         settings_level @default(admin)
+}
+
+model tbl_barang {
+  id_barang    Int                  @id @default(autoincrement())
+  kd_barang    String               @db.VarChar(16)
+  barcode      String               @db.VarChar(13)
+  nama_barang  String               @db.VarChar(100)
+  harga        Decimal              @db.Decimal(10, 2)
+  id_jenis     Int
+  stok_minimum Int
+  stok         Int                  @default(0)
+  id_satuan    Int
+  foto         String?              @db.VarChar(100)
+  is_active    tbl_barang_is_active @default(dbgenerated("1"))
+  created_at   DateTime             @default(now()) @db.Timestamp(0)
+  updated_at   DateTime             @default(now()) @db.Timestamp(0)
+}
+
+model tbl_barang_keluar {
+  id           Int                         @id @default(autoincrement())
+  transaksi_id String                      @db.VarChar(20)
+  tanggal      DateTime                    @db.Date
+  id_barang    Int
+  jumlah       Int?
+  is_active    tbl_barang_keluar_is_active @default(dbgenerated("1"))
+  created_at   DateTime                    @default(now()) @db.Timestamp(0)
+  updated_at   DateTime                    @default(now()) @db.Timestamp(0)
+  user_id      Int
+  keterangan   String                      @db.Text
+  teknisi      String                      @db.VarChar(250)
+}
+
+model tbl_barang_masuk {
+  id           Int                        @id @default(autoincrement())
+  transaksi_id String                     @db.VarChar(20)
+  tanggal      DateTime                   @db.Date
+  id_barang    Int
+  jumlah       Int?
+  is_active    tbl_barang_masuk_is_active @default(dbgenerated("1"))
+  created_at   DateTime                   @default(now()) @db.Timestamp(0)
+  updated_at   DateTime                   @default(now()) @db.Timestamp(0)
+  user_id      Int
+  keterangan   String                     @db.Text
+}
+
+model tbl_jenis {
+  id_jenis   Int                 @id @default(autoincrement())
+  nama_jenis String              @db.VarChar(50)
+  is_active  tbl_jenis_is_active @default(dbgenerated("1"))
+  created_at DateTime            @default(now()) @db.Timestamp(0)
+  updated_at DateTime            @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+}
+
+model tbl_satuan {
+  id_satuan   Int                  @id @default(autoincrement())
+  nama_satuan String               @db.VarChar(30)
+  is_active   tbl_satuan_is_active @default(dbgenerated("1"))
+  created_at  DateTime             @default(now()) @db.Timestamp(0)
+  updated_at  DateTime             @default(now()) @db.Timestamp(0)
+}
+
+model users {
+  user_id    Int          @id @default(autoincrement())
+  firstname  String       @db.VarChar(100)
+  nohape     String       @db.VarChar(20)
+  email      String       @unique(map: "email") @db.VarChar(100)
+  password   String       @db.VarChar(255)
+  level      users_level  @default(operator)
+  foto       String?      @db.VarChar(255)
+  status     users_status @default(aktif)
+  created_at DateTime     @default(now()) @db.Timestamp(0)
+  updated_at DateTime     @default(now()) @db.Timestamp(0)
+}
+
+enum satuan_is_active {
+  ZERO @map("0")
+  ONE  @map("1")
+}
+
+enum tbl_jenis_is_active {
+  ONE   @map("1")
+  ZERO  @map("0")
+  EMPTY @map("")
+}
+
+enum tbl_satuan_is_active {
+  ZERO @map("0")
+  ONE  @map("1")
+}
+
+enum tbl_barang_keluar_is_active {
+  ZERO @map("0")
+  ONE  @map("1")
+}
+
+enum tbl_barang_masuk_is_active {
+  ZERO @map("0")
+  ONE  @map("1")
+}
+
+enum users_level {
+  admin
+  operator
+}
+
+enum settings_level {
+  admin
+  user
+}
+
+enum users_status {
+  aktif
+  nonaktif
+}
+
+enum pelanggan_status {
+  Aktif
+  Nonaktif
+}
+
+enum tbl_barang_is_active {
+  ZERO @map("0")
+  ONE  @map("1")
+}
