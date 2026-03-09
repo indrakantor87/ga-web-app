@@ -231,20 +231,20 @@ export default function DashboardClient({ data }: { data: DashboardData }) {
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200 xl:col-span-2">
-          <div className="flex items-center justify-between">
+        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200 xl:col-span-2 flex flex-col h-[400px]">
+          <div className="flex items-center justify-between flex-shrink-0">
             <div>
               <h3 className="text-sm font-bold text-gray-900">Grafik Transaksi</h3>
               <p className="text-xs text-gray-500">Barang masuk dan keluar (7 bulan terakhir)</p>
             </div>
           </div>
-          <div className="mt-6 h-[360px] w-full">
+          <div className="mt-4 flex-1 w-full min-h-0">
             <TxChart data={data.chart} />
           </div>
         </div>
 
-        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <div className="flex items-center justify-between">
+        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200 flex flex-col h-[400px]">
+          <div className="flex items-center justify-between flex-shrink-0">
             <div>
               <h3 className="text-sm font-bold text-gray-900">Persediaan Kritis</h3>
               <p className="text-xs text-gray-500">Barang yang perlu segera restock</p>
@@ -253,7 +253,9 @@ export default function DashboardClient({ data }: { data: DashboardData }) {
               Lihat
             </Link>
           </div>
-          <LowStockList items={data.lowStock} />
+          <div className="flex-1 overflow-y-auto mt-4">
+            <LowStockList items={data.lowStock} />
+          </div>
         </div>
       </div>
 

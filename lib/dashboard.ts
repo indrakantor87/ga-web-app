@@ -108,29 +108,34 @@ export async function getDashboardData(): Promise<DashboardData> {
   })
 
   const [masukMonthly, keluarMonthly] = await Promise.all([
-    Promise.all(
-      monthRanges.map((r) =>
-        prisma.tbl_barang_masuk.aggregate({
-          where: { is_active: 'ONE', tanggal: { gte: r.start, lt: r.end } },
-          _sum: { jumlah: true },
-        })
-      )
-    ),
-    Promise.all(
-      monthRanges.map((r) =>
-        prisma.tbl_barang_keluar.aggregate({
-          where: { is_active: 'ONE', tanggal: { gte: r.start, lt: r.end } },
-          _sum: { jumlah: true },
-        })
-      )
-    ),
+    prisma.$queryRaw<{ month: number; year: number; total: number }[]>`
+      SELECT MONTH(tanggal) as month, YEAR(tanggal) as year, SUM(jumlah) as total
+      FROM tbl_barang_masuk
+      WHERE is_active = '1' AND tanggal >= ${addMonths(monthStart, -6)} AND tanggal < ${addMonths(monthStart, 1)}
+      GROUP BY YEAR(tanggal), MONTH(tanggal)
+    `,
+    prisma.$queryRaw<{ month: number; year: number; total: number }[]>`
+      SELECT MONTH(tanggal) as month, YEAR(tanggal) as year, SUM(jumlah) as total
+      FROM tbl_barang_keluar
+      WHERE is_active = '1' AND tanggal >= ${addMonths(monthStart, -6)} AND tanggal < ${addMonths(monthStart, 1)}
+      GROUP BY YEAR(tanggal), MONTH(tanggal)
+    `
   ])
 
   for (let i = 0; i < monthRanges.length; i++) {
+    const r = monthRanges[i]
+    if (!r) continue
+    const m = r.start.getMonth() + 1
+    const y = r.start.getFullYear()
+    
+    // Find matching data in results (converted to number/BigInt might be needed depending on driver)
+    const inData = masukMonthly.find(x => x.month === m && x.year === y)
+    const outData = keluarMonthly.find(x => x.month === m && x.year === y)
+
     chart.push({
-      name: monthRanges[i]?.label ?? '',
-      masuk: masukMonthly[i]?._sum.jumlah ?? 0,
-      keluar: keluarMonthly[i]?._sum.jumlah ?? 0,
+      name: r.label,
+      masuk: Number(inData?.total ?? 0),
+      keluar: Number(outData?.total ?? 0),
     })
   }
 
@@ -193,29 +198,29 @@ export async function getDashboardData(): Promise<DashboardData> {
   })
 
   const [masukDaily, keluarDaily] = await Promise.all([
-    Promise.all(
-      dayRanges.map((r) =>
-        prisma.tbl_barang_masuk.aggregate({
-          where: { is_active: 'ONE', tanggal: { gte: r.start, lt: r.end } },
-          _sum: { jumlah: true },
-        })
-      )
-    ),
-    Promise.all(
-      dayRanges.map((r) =>
-        prisma.tbl_barang_keluar.aggregate({
-          where: { is_active: 'ONE', tanggal: { gte: r.start, lt: r.end } },
-          _sum: { jumlah: true },
-        })
-      )
-    ),
+    prisma.$queryRaw<{ date: Date; total: number }[]>`
+      SELECT DATE(tanggal) as date, SUM(jumlah) as total
+      FROM tbl_barang_masuk
+      WHERE is_active = '1' AND tanggal >= ${dayStart} AND tanggal < ${addDays(todayStart, 1)}
+      GROUP BY DATE(tanggal)
+    `,
+    prisma.$queryRaw<{ date: Date; total: number }[]>`
+      SELECT DATE(tanggal) as date, SUM(jumlah) as total
+      FROM tbl_barang_keluar
+      WHERE is_active = '1' AND tanggal >= ${dayStart} AND tanggal < ${addDays(todayStart, 1)}
+      GROUP BY DATE(tanggal)
+    `
   ])
 
   for (let i = 0; i < dayRanges.length; i++) {
     const d = dayRanges[i]?.start ?? todayStart
-    const masuk = masukDaily[i]?._sum.jumlah ?? 0
-    const keluar = keluarDaily[i]?._sum.jumlah ?? 0
-    spark.push({ name: dayLabel(d), val: masuk + keluar })
+    // Match date string YYYY-MM-DD
+    const dateStr = d.toISOString().split('T')[0]
+    
+    const masuk = masukDaily.find(x => x.date.toISOString().split('T')[0] === dateStr)?.total ?? 0
+    const keluar = keluarDaily.find(x => x.date.toISOString().split('T')[0] === dateStr)?.total ?? 0
+    
+    spark.push({ name: dayLabel(d), val: Number(masuk) + Number(keluar) })
   }
 
   return {

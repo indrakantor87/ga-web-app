@@ -90,16 +90,16 @@ export function Sidebar() {
       "h-full bg-white flex flex-col overflow-y-auto transition-all duration-300 shadow-sm border-r border-gray-100",
       isSidebarOpen ? "w-64" : "w-20"
     )}>
-      <div className={clsx("h-16 flex items-center gap-3 border-b border-gray-100", 
+      <div className={clsx("h-20 flex items-center gap-3 border-b border-gray-100", 
         isSidebarOpen ? "px-6" : "justify-center"
       )}>
         {isSidebarOpen ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center w-full">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img 
               src="/logo-perkasa-new.png" 
               alt="Perkasa Networks" 
-              className="h-10 w-auto object-contain"
+              className="h-14 w-auto object-contain"
             />
           </div>
         ) : (
@@ -108,7 +108,7 @@ export function Sidebar() {
             <img 
               src="/logo-perkasa-new.png" 
               alt="Perkasa" 
-              className="h-8 w-auto object-contain"
+              className="h-10 w-auto object-contain"
             />
           </div>
         )}

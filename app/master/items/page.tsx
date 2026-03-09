@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Pencil, Plus, Power } from 'lucide-react'
 import { clsx } from 'clsx'
+import * as XLSX from 'xlsx'
 
 type ItemRow = {
   id_barang: number
@@ -70,22 +71,11 @@ function Modal({
   )
 }
 
-function downloadCsv(filename: string, rows: Record<string, string | number | null | undefined>[]) {
-  const headers = Object.keys(rows[0] ?? {})
-  const escapeCell = (v: unknown) => {
-    const s = v == null ? '' : String(v)
-    const needsQuote = /[",\n]/.test(s)
-    const inner = s.replaceAll('"', '""')
-    return needsQuote ? `"${inner}"` : inner
-  }
-  const csv = [headers.join(','), ...rows.map((r) => headers.map((h) => escapeCell(r[h])).join(','))].join('\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
+function downloadExcel(filename: string, rows: Record<string, string | number | null | undefined>[]) {
+  const worksheet = XLSX.utils.json_to_sheet(rows)
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Data')
+  XLSX.writeFile(workbook, filename)
 }
 
 export default function MasterItemsPage() {
@@ -274,18 +264,18 @@ export default function MasterItemsPage() {
   }
 
   const exportCsv = () => {
-    const csvRows = rows.map((r) => ({
-      kd_barang: r.kd_barang,
-      barcode: r.barcode,
-      nama_barang: r.nama_barang,
-      jenis: r.nama_jenis ?? '',
-      satuan: r.nama_satuan ?? '',
-      harga: r.harga,
-      stok_minimum: r.stok_minimum,
-      stok: r.stok,
-      status: r.is_active === '1' || r.is_active === 'ONE' ? 'Aktif' : 'Nonaktif',
+    if (rows.length === 0) return
+    const exportData = rows.map((r) => ({
+      Kode: r.kd_barang,
+      Barcode: r.barcode,
+      Nama: r.nama_barang,
+      Jenis: r.nama_jenis,
+      Satuan: r.nama_satuan,
+      Harga: r.harga,
+      Stok: r.stok,
+      Status: r.is_active === '1' ? 'Aktif' : 'Nonaktif',
     }))
-    downloadCsv(`data-barang-page-${page}.csv`, csvRows)
+    downloadExcel('DataBarang.xlsx', exportData)
   }
 
   const activeCategories = useMemo(() => categories.filter((c) => c.is_active === 'ONE'), [categories])
@@ -310,7 +300,7 @@ export default function MasterItemsPage() {
             onClick={exportCsv}
             className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
           >
-            Export CSV
+            Export Excel
           </button>
         </div>
       </div>
