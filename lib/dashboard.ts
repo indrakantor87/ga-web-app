@@ -129,8 +129,8 @@ export async function getDashboardData(): Promise<DashboardData> {
     const y = r.start.getFullYear()
     
     // Find matching data in results (converted to number/BigInt might be needed depending on driver)
-    const inData = masukMonthly.find(x => x.month === m && x.year === y)
-    const outData = keluarMonthly.find(x => x.month === m && x.year === y)
+    const inData = masukMonthly.find((x: { month: number; year: number; total: number }) => x.month === m && x.year === y)
+    const outData = keluarMonthly.find((x: { month: number; year: number; total: number }) => x.month === m && x.year === y)
 
     chart.push({
       name: r.label,
@@ -174,7 +174,16 @@ export async function getDashboardData(): Promise<DashboardData> {
     LIMIT 10
   `
 
-  const activities: DashboardActivity[] = activitiesRows.map((r) => {
+  const activities: DashboardActivity[] = activitiesRows.map((r: {
+    kind: 'IN' | 'OUT'
+    id: number
+    tanggal: Date
+    ref: string
+    user: string | null
+    item: string | null
+    qty: number | null
+    ket: string | null
+  }) => {
     const parts = [r.item ?? undefined, r.ket ?? undefined].filter(Boolean) as string[]
     const qty = r.qty != null ? `x${r.qty}` : ''
     const note = parts.length === 0 ? '-' : qty ? `${parts.join(' · ')} ${qty}` : parts.join(' · ')
@@ -217,8 +226,8 @@ export async function getDashboardData(): Promise<DashboardData> {
     // Match date string YYYY-MM-DD
     const dateStr = d.toISOString().split('T')[0]
     
-    const masuk = masukDaily.find(x => x.date.toISOString().split('T')[0] === dateStr)?.total ?? 0
-    const keluar = keluarDaily.find(x => x.date.toISOString().split('T')[0] === dateStr)?.total ?? 0
+    const masuk = masukDaily.find((x: { date: Date; total: number }) => x.date.toISOString().split('T')[0] === dateStr)?.total ?? 0
+    const keluar = keluarDaily.find((x: { date: Date; total: number }) => x.date.toISOString().split('T')[0] === dateStr)?.total ?? 0
     
     spark.push({ name: dayLabel(d), val: Number(masuk) + Number(keluar) })
   }
