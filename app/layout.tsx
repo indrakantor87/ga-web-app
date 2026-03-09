@@ -52,7 +52,7 @@ export default function RootLayout({
       <head>
         <title>GA Inventory - Perkasa Networks</title>
         <meta name="description" content="General Affair Inventory Management" />
-        <link rel="icon" href="/favicon.png" />
+        <link rel="icon" href="/favicon.png" type="image/png" />
       </head>
       <body className={inter.className}>
         <SidebarProvider>
