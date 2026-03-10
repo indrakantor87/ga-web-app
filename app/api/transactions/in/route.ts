@@ -176,7 +176,7 @@ export async function POST(req: Request) {
           keterangan: keterangan || '',
           nama_toko: nama_toko || '',
           user_id,
-          is_active: '1',
+          is_active: 'ONE',
         },
       }),
       prisma.tbl_barang.update({
