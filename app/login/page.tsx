@@ -34,8 +34,9 @@ export default function LoginPage() {
 
       router.push('/dashboard') // Redirect ke dashboard
       router.refresh()
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Login gagal'
+      setError(message)
     } finally {
       setLoading(false)
     }

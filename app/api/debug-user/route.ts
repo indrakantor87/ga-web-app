@@ -25,7 +25,8 @@ export async function GET() {
       env: process.env.NODE_ENV,
       db_url_preview: process.env.DATABASE_URL ? 'Set' : 'Unset'
     })
-  } catch (error: any) {
-    return NextResponse.json({ status: 'Error', error: error.message })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return NextResponse.json({ status: 'Error', error: message })
   }
 }

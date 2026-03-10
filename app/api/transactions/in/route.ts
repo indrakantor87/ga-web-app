@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import type { Prisma } from '@prisma/client'
 
 function toInt(v: string | null, fallback: number) {
   const n = Number(v)
@@ -18,6 +17,22 @@ function toCsv(rows: Record<string, unknown>[]) {
   const headers = Object.keys(rows[0] ?? {})
   const lines = [headers.join(','), ...rows.map((r) => headers.map((h) => csvEscapeCell(r[h])).join(','))]
   return lines.join('\n')
+}
+
+function isUnknownColumnNamaToko(error: unknown) {
+  const msg = error instanceof Error ? error.message : String(error)
+  return msg.includes('Unknown column') && msg.includes('nama_toko')
+}
+
+async function ensureNamaTokoColumn() {
+  try {
+    await prisma.$executeRaw`ALTER TABLE tbl_barang_masuk ADD COLUMN nama_toko VARCHAR(100) NULL`
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error)
+    if (msg.includes('Duplicate column name') && msg.includes('nama_toko')) return
+    if (msg.includes('1060') && msg.includes('nama_toko')) return
+    throw error
+  }
 }
 
 export async function GET(req: Request) {
@@ -53,35 +68,80 @@ export async function GET(req: Request) {
   const limit = exportCsv ? Math.min(10000, total || 10000) : pageSize
   const offset = exportCsv ? 0 : (page - 1) * pageSize
 
-  const rows = await prisma.$queryRaw<
-    Array<{
-      id: number
-      transaksi_id: string
-      tanggal: Date
-      kd_barang: string
-      nama_barang: string
-      nama_satuan: string | null
-      jumlah: number | null
-      keterangan: string
-      nama_toko: string | null
-    }>
-  >`
-    SELECT bm.id, bm.transaksi_id, bm.tanggal, b.kd_barang, b.nama_barang, s.nama_satuan, bm.jumlah, bm.keterangan, bm.nama_toko
-    FROM tbl_barang_masuk bm
-    LEFT JOIN tbl_barang b ON b.id_barang = bm.id_barang
-    LEFT JOIN tbl_satuan s ON s.id_satuan = b.id_satuan
-    WHERE bm.is_active = '1'
-      AND (${startDate} IS NULL OR bm.tanggal >= ${startDate})
-      AND (${endExclusive} IS NULL OR bm.tanggal < ${endExclusive})
-      AND (
-        ${like} IS NULL
-        OR b.nama_barang LIKE ${like}
-        OR b.kd_barang LIKE ${like}
-        OR bm.transaksi_id LIKE ${like}
-      )
-    ORDER BY bm.tanggal DESC, bm.id DESC
-    LIMIT ${limit} OFFSET ${offset}
-  `
+  let rows: Array<{
+    id: number
+    transaksi_id: string
+    tanggal: Date
+    kd_barang: string
+    nama_barang: string
+    nama_satuan: string | null
+    jumlah: number | null
+    keterangan: string
+    nama_toko: string | null
+  }>
+  try {
+    rows = await prisma.$queryRaw<
+      Array<{
+        id: number
+        transaksi_id: string
+        tanggal: Date
+        kd_barang: string
+        nama_barang: string
+        nama_satuan: string | null
+        jumlah: number | null
+        keterangan: string
+        nama_toko: string | null
+      }>
+    >`
+      SELECT bm.id, bm.transaksi_id, bm.tanggal, b.kd_barang, b.nama_barang, s.nama_satuan, bm.jumlah, bm.keterangan, bm.nama_toko
+      FROM tbl_barang_masuk bm
+      LEFT JOIN tbl_barang b ON b.id_barang = bm.id_barang
+      LEFT JOIN tbl_satuan s ON s.id_satuan = b.id_satuan
+      WHERE bm.is_active = '1'
+        AND (${startDate} IS NULL OR bm.tanggal >= ${startDate})
+        AND (${endExclusive} IS NULL OR bm.tanggal < ${endExclusive})
+        AND (
+          ${like} IS NULL
+          OR b.nama_barang LIKE ${like}
+          OR b.kd_barang LIKE ${like}
+          OR bm.transaksi_id LIKE ${like}
+        )
+      ORDER BY bm.tanggal DESC, bm.id DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `
+  } catch (error) {
+    if (!isUnknownColumnNamaToko(error)) throw error
+    await ensureNamaTokoColumn()
+    rows = await prisma.$queryRaw<
+      Array<{
+        id: number
+        transaksi_id: string
+        tanggal: Date
+        kd_barang: string
+        nama_barang: string
+        nama_satuan: string | null
+        jumlah: number | null
+        keterangan: string
+        nama_toko: string | null
+      }>
+    >`
+      SELECT bm.id, bm.transaksi_id, bm.tanggal, b.kd_barang, b.nama_barang, s.nama_satuan, bm.jumlah, bm.keterangan, bm.nama_toko
+      FROM tbl_barang_masuk bm
+      LEFT JOIN tbl_barang b ON b.id_barang = bm.id_barang
+      LEFT JOIN tbl_satuan s ON s.id_satuan = b.id_satuan
+      WHERE bm.is_active = '1'
+        AND (${startDate} IS NULL OR bm.tanggal >= ${startDate})
+        AND (${endExclusive} IS NULL OR bm.tanggal < ${endExclusive})
+        AND (
+          ${like} IS NULL
+          OR b.nama_barang LIKE ${like}
+          OR b.kd_barang LIKE ${like}
+          OR bm.transaksi_id LIKE ${like}
+        )
+      ORDER BY bm.tanggal DESC, bm.id DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `
+  }
 
   if (exportCsv) {
     const csvRows = rows.map((r: { 
@@ -114,21 +174,11 @@ export async function GET(req: Request) {
   }
 
     return NextResponse.json({ total, page, pageSize, rows })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching transactions:', error)
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 })
+    const message = error instanceof Error ? error.message : String(error)
+    return NextResponse.json({ error: message || 'Internal Server Error' }, { status: 500 })
   }
-}
-
-async function genTransId(prefix: string, tanggal: Date) {
-  const y = tanggal.getFullYear()
-  const m = String(tanggal.getMonth() + 1).padStart(2, '0')
-  const d = String(tanggal.getDate()).padStart(2, '0')
-  const dayStart = new Date(y, tanggal.getMonth(), tanggal.getDate())
-  const dayEnd = new Date(y, tanggal.getMonth(), tanggal.getDate() + 1)
-  const count = await prisma.tbl_barang_masuk.count({ where: { tanggal: { gte: dayStart, lt: dayEnd } } })
-  const seq = String(count + 1).padStart(3, '0')
-  return `${prefix}${y}${m}${d}-${seq}`
 }
 
 export async function POST(req: Request) {
@@ -166,28 +216,53 @@ export async function POST(req: Request) {
     const user_id = 8 // Default user ID for now
 
     // Transaction
-    const [newItem] = await prisma.$transaction([
-      prisma.tbl_barang_masuk.create({
-        data: {
-          transaksi_id,
-          tanggal: dateObj,
-          id_barang: Number(id_barang),
-          jumlah: Number(jumlah),
-          keterangan: keterangan || '',
-          nama_toko: nama_toko || '',
-          user_id,
-          is_active: 'ONE',
-        },
-      }),
-      prisma.tbl_barang.update({
-        where: { id_barang: Number(id_barang) },
-        data: { stok: { increment: Number(jumlah) } },
-      }),
-    ])
+    let newItem: unknown
+    try {
+      ;[newItem] = await prisma.$transaction([
+        prisma.tbl_barang_masuk.create({
+          data: {
+            transaksi_id,
+            tanggal: dateObj,
+            id_barang: Number(id_barang),
+            jumlah: Number(jumlah),
+            keterangan: keterangan || '',
+            nama_toko: nama_toko || '',
+            user_id,
+            is_active: 'ONE',
+          },
+        }),
+        prisma.tbl_barang.update({
+          where: { id_barang: Number(id_barang) },
+          data: { stok: { increment: Number(jumlah) } },
+        }),
+      ])
+    } catch (error) {
+      if (!isUnknownColumnNamaToko(error)) throw error
+      await ensureNamaTokoColumn()
+      ;[newItem] = await prisma.$transaction([
+        prisma.tbl_barang_masuk.create({
+          data: {
+            transaksi_id,
+            tanggal: dateObj,
+            id_barang: Number(id_barang),
+            jumlah: Number(jumlah),
+            keterangan: keterangan || '',
+            nama_toko: nama_toko || '',
+            user_id,
+            is_active: 'ONE',
+          },
+        }),
+        prisma.tbl_barang.update({
+          where: { id_barang: Number(id_barang) },
+          data: { stok: { increment: Number(jumlah) } },
+        }),
+      ])
+    }
 
     return NextResponse.json({ ok: true, data: newItem })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating transaction:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    const message = error instanceof Error ? error.message : String(error)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
