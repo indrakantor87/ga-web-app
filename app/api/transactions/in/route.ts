@@ -21,8 +21,9 @@ function toCsv(rows: Record<string, unknown>[]) {
 }
 
 export async function GET(req: Request) {
-  const url = new URL(req.url)
-  const q = (url.searchParams.get('q') ?? '').trim()
+  try {
+    const url = new URL(req.url)
+    const q = (url.searchParams.get('q') ?? '').trim()
   const start = url.searchParams.get('start')
   const end = url.searchParams.get('end')
   const page = Math.max(1, toInt(url.searchParams.get('page'), 1))
@@ -62,9 +63,10 @@ export async function GET(req: Request) {
       nama_satuan: string | null
       jumlah: number | null
       keterangan: string
+      nama_toko: string | null
     }>
   >`
-    SELECT bm.id, bm.transaksi_id, bm.tanggal, b.kd_barang, b.nama_barang, s.nama_satuan, bm.jumlah, bm.keterangan
+    SELECT bm.id, bm.transaksi_id, bm.tanggal, b.kd_barang, b.nama_barang, s.nama_satuan, bm.jumlah, bm.keterangan, bm.nama_toko
     FROM tbl_barang_masuk bm
     LEFT JOIN tbl_barang b ON b.id_barang = bm.id_barang
     LEFT JOIN tbl_satuan s ON s.id_satuan = b.id_satuan
@@ -82,7 +84,16 @@ export async function GET(req: Request) {
   `
 
   if (exportCsv) {
-    const csvRows = rows.map((r: { transaksi_id: string; tanggal: Date; kd_barang: string; nama_barang: string; nama_satuan: string | null; jumlah: number | null; keterangan: string }) => ({
+    const csvRows = rows.map((r: { 
+      transaksi_id: string
+      tanggal: Date
+      kd_barang: string
+      nama_barang: string
+      nama_satuan: string | null
+      jumlah: number | null
+      keterangan: string
+      nama_toko: string | null
+    }) => ({
       transaksi_id: r.transaksi_id,
       tanggal: r.tanggal.toISOString().slice(0, 10),
       kd_barang: r.kd_barang,
@@ -90,6 +101,7 @@ export async function GET(req: Request) {
       satuan: r.nama_satuan ?? '',
       jumlah_masuk: r.jumlah ?? 0,
       keterangan: r.keterangan ?? '',
+      nama_toko: r.nama_toko ?? '',
     }))
     const csv = toCsv(csvRows)
     return new NextResponse(csv, {
@@ -101,7 +113,11 @@ export async function GET(req: Request) {
     })
   }
 
-  return NextResponse.json({ total, page, pageSize, rows })
+    return NextResponse.json({ total, page, pageSize, rows })
+  } catch (error: any) {
+    console.error('Error fetching transactions:', error)
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 })
+  }
 }
 
 async function genTransId(prefix: string, tanggal: Date) {
@@ -116,36 +132,62 @@ async function genTransId(prefix: string, tanggal: Date) {
 }
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}))
-  const id_barang = Number(body?.id_barang ?? NaN)
-  const jumlah = Number(body?.jumlah ?? NaN)
-  const tanggal = body?.tanggal ? new Date(String(body.tanggal)) : new Date()
-  const keterangan = String(body?.keterangan ?? '').trim()
-  const user_id = Number(body?.user_id ?? 0)
+  try {
+    const body = await req.json()
+    const { tanggal, id_barang, jumlah, keterangan, nama_toko } = body
 
-  if (!Number.isFinite(id_barang) || !Number.isFinite(jumlah) || jumlah <= 0) {
-    return NextResponse.json({ error: 'Data tidak valid' }, { status: 400 })
+    if (!tanggal || !id_barang || !jumlah) {
+      return NextResponse.json({ error: 'Data tidak lengkap' }, { status: 400 })
+    }
+
+    const dateObj = new Date(tanggal)
+    const yyyy = dateObj.getFullYear()
+    const mm = String(dateObj.getMonth() + 1).padStart(2, '0')
+    const dd = String(dateObj.getDate()).padStart(2, '0')
+    const dateStr = `${yyyy}${mm}${dd}`
+
+    // Generate ID: BRG-MSK-YYYYMMDD-XXX
+    const prefix = `BRG-MSK-${dateStr}-`
+    const lastTx = await prisma.tbl_barang_masuk.findFirst({
+      where: { transaksi_id: { startsWith: prefix } },
+      orderBy: { transaksi_id: 'desc' },
+    })
+
+    let nextSeq = 1
+    if (lastTx) {
+      const parts = lastTx.transaksi_id.split('-')
+      const lastSeq = parseInt(parts[parts.length - 1], 10)
+      if (!isNaN(lastSeq)) nextSeq = lastSeq + 1
+    }
+
+    const transaksi_id = `${prefix}${String(nextSeq).padStart(3, '0')}`
+
+    // TODO: Get real user ID from session
+    const user_id = 8 // Default user ID for now
+
+    // Transaction
+    const [newItem] = await prisma.$transaction([
+      prisma.tbl_barang_masuk.create({
+        data: {
+          transaksi_id,
+          tanggal: dateObj,
+          id_barang: Number(id_barang),
+          jumlah: Number(jumlah),
+          keterangan: keterangan || '',
+          nama_toko: nama_toko || '',
+          user_id,
+          is_active: '1',
+        },
+      }),
+      prisma.tbl_barang.update({
+        where: { id_barang: Number(id_barang) },
+        data: { stok: { increment: Number(jumlah) } },
+      }),
+    ])
+
+    return NextResponse.json({ ok: true, data: newItem })
+  } catch (error: any) {
+    console.error('Error creating transaction:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
-
-  const transaksi_id = await genTransId('BRG-MSK-', tanggal)
-
-  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    await tx.tbl_barang_masuk.create({
-      data: {
-        transaksi_id,
-        tanggal,
-        id_barang,
-        jumlah,
-        user_id,
-        keterangan,
-        is_active: 'ONE',
-      },
-    })
-    await tx.tbl_barang.update({
-      where: { id_barang },
-      data: { stok: { increment: jumlah } },
-    })
-  })
-
-  return NextResponse.json({ ok: true, transaksi_id })
 }

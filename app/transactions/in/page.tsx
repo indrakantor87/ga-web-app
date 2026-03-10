@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { Pencil, Plus, Trash } from 'lucide-react'
+import Select from 'react-select'
 
 type Row = {
   id: number
@@ -12,6 +13,7 @@ type Row = {
   nama_satuan: string | null
   jumlah: number | null
   keterangan: string
+  nama_toko: string
 }
 
 type ItemOption = { id_barang: number; kd_barang: string; nama_barang: string; nama_satuan: string | null }
@@ -42,7 +44,7 @@ export default function Page() {
   const [items, setItems] = useState<ItemOption[]>([])
   const [modal, setModal] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ id_barang: '', tanggal: fmtDateInput(today), jumlah: '', keterangan: '' })
+  const [form, setForm] = useState({ id_barang: '', tanggal: fmtDateInput(today), jumlah: '', keterangan: '', nama_toko: '' })
   const [editing, setEditing] = useState<Row | null>(null)
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize])
@@ -55,24 +57,30 @@ export default function Page() {
     url.searchParams.set('page', String(page))
     url.searchParams.set('pageSize', String(pageSize))
     const r = await fetch(url.toString(), { cache: 'no-store' })
-    const data: unknown = await r.json()
-    if (!r.ok) {
-      const err = (data as { error?: string })?.error
-      throw new Error(err ?? 'Gagal memuat data')
+    const text = await r.text()
+    try {
+      const data = JSON.parse(text)
+      if (!r.ok) {
+        throw new Error((data as { error?: string })?.error ?? 'Gagal memuat data')
+      }
+      const obj = data as InListResponse
+      const mapped: Row[] = (obj.rows ?? []).map((x) => ({
+        id: x.id,
+        transaksi_id: String(x.transaksi_id),
+        tanggal: new Date(x.tanggal).toISOString().slice(0, 10),
+        kd_barang: String(x.kd_barang),
+        nama_barang: String(x.nama_barang),
+        nama_satuan: x.nama_satuan ?? null,
+        jumlah: typeof x.jumlah === 'number' ? x.jumlah : Number(x.jumlah ?? 0),
+        keterangan: String(x.keterangan ?? ''),
+        nama_toko: String(x.nama_toko ?? ''),
+      }))
+      setRows(mapped)
+      setTotal(obj.total ?? 0)
+    } catch (e) {
+      console.error('JSON Parse Error:', text)
+      throw new Error('Invalid server response')
     }
-    const obj = data as InListResponse
-    const mapped: Row[] = (obj.rows ?? []).map((x) => ({
-      id: x.id,
-      transaksi_id: String(x.transaksi_id),
-      tanggal: new Date(x.tanggal).toISOString().slice(0, 10),
-      kd_barang: String(x.kd_barang),
-      nama_barang: String(x.nama_barang),
-      nama_satuan: x.nama_satuan ?? null,
-      jumlah: typeof x.jumlah === 'number' ? x.jumlah : Number(x.jumlah ?? 0),
-      keterangan: String(x.keterangan ?? ''),
-    }))
-    setRows(mapped)
-    setTotal(obj.total ?? 0)
   }
 
   useEffect(() => {
@@ -86,25 +94,29 @@ export default function Page() {
     url.searchParams.set('page', String(page))
     url.searchParams.set('pageSize', String(pageSize))
     fetch(url.toString(), { signal: controller.signal, cache: 'no-store' })
-      .then(async (r) => {
-        const data: unknown = await r.json()
-        if (!r.ok) {
-          const err = (data as { error?: string })?.error
-          throw new Error(err ?? 'Gagal memuat data')
+      .then((r) => r.text())
+      .then((text) => {
+        try {
+          const data = JSON.parse(text)
+          if (data.error) throw new Error(data.error)
+          const obj = data as InListResponse
+          const mapped: Row[] = (obj.rows ?? []).map((x) => ({
+            id: x.id,
+            transaksi_id: String(x.transaksi_id),
+            tanggal: new Date(x.tanggal).toISOString().slice(0, 10),
+            kd_barang: String(x.kd_barang),
+            nama_barang: String(x.nama_barang),
+            nama_satuan: x.nama_satuan ?? null,
+            jumlah: typeof x.jumlah === 'number' ? x.jumlah : Number(x.jumlah ?? 0),
+            keterangan: String(x.keterangan ?? ''),
+            nama_toko: String(x.nama_toko ?? ''),
+          }))
+          setRows(mapped)
+          setTotal(obj.total ?? 0)
+        } catch (e) {
+          console.error('JSON Parse Error:', text)
+          throw new Error('Invalid server response')
         }
-        const obj = data as InListResponse
-        const mapped: Row[] = (obj.rows ?? []).map((x) => ({
-          id: x.id,
-          transaksi_id: String(x.transaksi_id),
-          tanggal: new Date(x.tanggal).toISOString().slice(0, 10),
-          kd_barang: String(x.kd_barang),
-          nama_barang: String(x.nama_barang),
-          nama_satuan: x.nama_satuan ?? null,
-          jumlah: typeof x.jumlah === 'number' ? x.jumlah : Number(x.jumlah ?? 0),
-          keterangan: String(x.keterangan ?? ''),
-        }))
-        setRows(mapped)
-        setTotal(obj.total ?? 0)
       })
       .catch((e) => {
         if (controller.signal.aborted) return
@@ -157,6 +169,7 @@ export default function Page() {
         tanggal: form.tanggal,
         jumlah: Number(form.jumlah),
         keterangan: form.keterangan.trim(),
+        nama_toko: form.nama_toko.trim(),
       }
       if (!Number.isFinite(payload.id_barang)) throw new Error('Pilih barang')
       if (!Number.isFinite(payload.jumlah) || payload.jumlah <= 0) throw new Error('Jumlah tidak valid')
@@ -182,6 +195,7 @@ export default function Page() {
       tanggal: row.tanggal,
       jumlah: String(row.jumlah ?? ''),
       keterangan: row.keterangan ?? '',
+      nama_toko: row.nama_toko ?? '',
     })
     setModal(true)
   }
@@ -197,17 +211,18 @@ export default function Page() {
     await refresh()
   }
 
+  const openAdd = () => {
+    setEditing(null)
+    setForm({ id_barang: '', tanggal: fmtDateInput(today), jumlah: '', keterangan: '', nama_toko: '' })
+    setModal(true)
+  }
   const exportExcel = () => {
     const url = new URL('/api/transactions/in', window.location.origin)
     url.searchParams.set('q', q)
     if (start) url.searchParams.set('start', start)
     if (end) url.searchParams.set('end', end)
     url.searchParams.set('export', 'csv')
-    const a = document.createElement('a')
-    a.href = url.toString()
-    a.target = '_blank'
-    a.rel = 'noreferrer'
-    a.click()
+    window.open(url.toString(), '_blank')
   }
 
   return (
@@ -218,7 +233,7 @@ export default function Page() {
           <p className="text-sm text-gray-500">Data barang masuk</p>
         </div>
         <div className="flex items-center gap-2">
-        <button onClick={() => setModal(true)} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700">
+        <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700">
           <Plus className="h-4 w-4" />
           Tambah Data
         </button>
@@ -256,8 +271,9 @@ export default function Page() {
                 <th className="py-3 pr-4">Tanggal</th>
                 <th className="py-3 pr-4">Kode</th>
                 <th className="py-3 pr-4">Nama Barang</th>
-                <th className="py-3 pr-4">Satuan</th>
-                <th className="py-3 pr-4">Jumlah</th>
+            <th className="py-3 pr-4">Nama Toko</th>
+            <th className="py-3 pr-4">Satuan</th>
+            <th className="py-3 pr-4">Jumlah</th>
                 <th className="py-3 pr-4">Keterangan</th>
                 <th className="py-3">Aksi</th>
               </tr>
@@ -282,6 +298,7 @@ export default function Page() {
                     <td className="py-3 pr-4">{r.tanggal}</td>
                     <td className="py-3 pr-4 font-mono text-xs">{r.kd_barang}</td>
                     <td className="py-3 pr-4">{r.nama_barang}</td>
+                    <td className="py-3 pr-4">{r.nama_toko}</td>
                     <td className="py-3 pr-4">{r.nama_satuan ?? '-'}</td>
                     <td className="py-3 pr-4">{r.jumlah ?? 0}</td>
                     <td className="py-3 pr-4">{r.keterangan}</td>
@@ -330,14 +347,38 @@ export default function Page() {
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
                 <label className="text-sm font-semibold text-gray-700">Barang</label>
-                <select value={form.id_barang} onChange={(e) => setForm((p) => ({ ...p, id_barang: e.target.value }))} className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
-                  <option value="">Pilih barang</option>
-                  {items.map((it) => (
-                    <option key={it.id_barang} value={it.id_barang}>
-                      {it.kd_barang} · {it.nama_barang}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                  options={items.map((it) => ({
+                    value: it.id_barang,
+                    label: `${it.kd_barang} - ${it.nama_barang}`
+                  }))}
+                  value={
+                    form.id_barang
+                      ? {
+                          value: Number(form.id_barang),
+                          label: items.find((it) => it.id_barang === Number(form.id_barang))
+                            ? `${items.find((it) => it.id_barang === Number(form.id_barang))?.kd_barang} - ${items.find((it) => it.id_barang === Number(form.id_barang))?.nama_barang}`
+                            : 'Pilih barang'
+                        }
+                      : null
+                  }
+                  onChange={(option) => setForm((p) => ({ ...p, id_barang: String(option?.value ?? '') }))}
+                  placeholder="Pilih barang..."
+                  isClearable
+                  menuPortalTarget={document.body} 
+                  styles={{ 
+                    menuPortal: base => ({ ...base, zIndex: 9999 }),
+                    control: (base) => ({ ...base, borderColor: '#e5e7eb', borderRadius: '0.5rem', padding: '2px' }),
+                    option: (base, state) => ({
+                      ...base,
+                      backgroundColor: state.isFocused ? '#e0e7ff' : 'white',
+                      color: '#1f2937',
+                    }),
+                    singleValue: (base) => ({ ...base, color: '#1f2937' }),
+                    input: (base) => ({ ...base, color: '#1f2937' }),
+                  }}
+                  className="mt-2 text-sm"
+                />
               </div>
               <div>
                 <label className="text-sm font-semibold text-gray-700">Tanggal</label>
@@ -346,6 +387,10 @@ export default function Page() {
               <div>
                 <label className="text-sm font-semibold text-gray-700">Jumlah</label>
                 <input value={form.jumlah} onChange={(e) => setForm((p) => ({ ...p, jumlah: e.target.value }))} className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" placeholder="0" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-sm font-semibold text-gray-700">Nama Toko</label>
+                <input value={form.nama_toko} onChange={(e) => setForm((p) => ({ ...p, nama_toko: e.target.value }))} className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
               </div>
               <div className="md:col-span-2">
                 <label className="text-sm font-semibold text-gray-700">Keterangan</label>

@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { Plus, Pencil, Trash } from 'lucide-react'
+import { Pencil, Plus, Trash } from 'lucide-react'
+import Select from 'react-select'
 
 type Row = {
   id: number
@@ -335,14 +336,38 @@ export default function Page() {
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
                 <label className="text-sm font-semibold text-gray-700">Barang</label>
-                <select value={form.id_barang} onChange={(e) => setForm((p) => ({ ...p, id_barang: e.target.value }))} className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
-                  <option value="">Pilih barang</option>
-                  {items.map((it) => (
-                    <option key={it.id_barang} value={it.id_barang}>
-                      {it.kd_barang} · {it.nama_barang}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                  options={items.map((it) => ({
+                    value: it.id_barang,
+                    label: `${it.kd_barang} - ${it.nama_barang}`
+                  }))}
+                  value={
+                    form.id_barang
+                      ? {
+                          value: Number(form.id_barang),
+                          label: items.find((it) => it.id_barang === Number(form.id_barang))
+                            ? `${items.find((it) => it.id_barang === Number(form.id_barang))?.kd_barang} - ${items.find((it) => it.id_barang === Number(form.id_barang))?.nama_barang}`
+                            : 'Pilih barang'
+                        }
+                      : null
+                  }
+                  onChange={(option) => setForm((p) => ({ ...p, id_barang: String(option?.value ?? '') }))}
+                  placeholder="Pilih barang..."
+                  isClearable
+                  menuPortalTarget={document.body} 
+                  styles={{ 
+                    menuPortal: base => ({ ...base, zIndex: 9999 }),
+                    control: (base) => ({ ...base, borderColor: '#e5e7eb', borderRadius: '0.5rem', padding: '2px' }),
+                    option: (base, state) => ({
+                      ...base,
+                      backgroundColor: state.isFocused ? '#e0e7ff' : 'white',
+                      color: '#1f2937',
+                    }),
+                    singleValue: (base) => ({ ...base, color: '#1f2937' }),
+                    input: (base) => ({ ...base, color: '#1f2937' }),
+                  }}
+                  className="mt-2 text-sm"
+                />
               </div>
               <div>
                 <label className="text-sm font-semibold text-gray-700">Tanggal</label>
