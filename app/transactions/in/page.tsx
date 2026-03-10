@@ -58,29 +58,37 @@ export default function Page() {
     url.searchParams.set('pageSize', String(pageSize))
     const r = await fetch(url.toString(), { cache: 'no-store' })
     const text = await r.text()
+    
+    let data
     try {
-      const data = JSON.parse(text)
-      if (!r.ok) {
-        throw new Error((data as { error?: string })?.error ?? 'Gagal memuat data')
-      }
-      const obj = data as InListResponse
-      const mapped: Row[] = (obj.rows ?? []).map((x) => ({
-        id: x.id,
-        transaksi_id: String(x.transaksi_id),
-        tanggal: new Date(x.tanggal).toISOString().slice(0, 10),
-        kd_barang: String(x.kd_barang),
-        nama_barang: String(x.nama_barang),
-        nama_satuan: x.nama_satuan ?? null,
-        jumlah: typeof x.jumlah === 'number' ? x.jumlah : Number(x.jumlah ?? 0),
-        keterangan: String(x.keterangan ?? ''),
-        nama_toko: String(x.nama_toko ?? ''),
-      }))
-      setRows(mapped)
-      setTotal(obj.total ?? 0)
+      data = JSON.parse(text)
     } catch (e) {
       console.error('JSON Parse Error:', text)
-      throw new Error('Invalid server response')
+      throw new Error('Invalid server response (Not JSON)')
     }
+
+    if (data.error) {
+      throw new Error(data.error)
+    }
+    
+    if (!r.ok) {
+      throw new Error(data.error ?? 'Gagal memuat data')
+    }
+
+    const obj = data as InListResponse
+    const mapped: Row[] = (obj.rows ?? []).map((x) => ({
+      id: x.id,
+      transaksi_id: String(x.transaksi_id),
+      tanggal: new Date(x.tanggal).toISOString().slice(0, 10),
+      kd_barang: String(x.kd_barang),
+      nama_barang: String(x.nama_barang),
+      nama_satuan: x.nama_satuan ?? null,
+      jumlah: typeof x.jumlah === 'number' ? x.jumlah : Number(x.jumlah ?? 0),
+      keterangan: String(x.keterangan ?? ''),
+      nama_toko: String(x.nama_toko ?? ''),
+    }))
+    setRows(mapped)
+    setTotal(obj.total ?? 0)
   }
 
   useEffect(() => {
@@ -96,27 +104,30 @@ export default function Page() {
     fetch(url.toString(), { signal: controller.signal, cache: 'no-store' })
       .then((r) => r.text())
       .then((text) => {
+        let data
         try {
-          const data = JSON.parse(text)
-          if (data.error) throw new Error(data.error)
-          const obj = data as InListResponse
-          const mapped: Row[] = (obj.rows ?? []).map((x) => ({
-            id: x.id,
-            transaksi_id: String(x.transaksi_id),
-            tanggal: new Date(x.tanggal).toISOString().slice(0, 10),
-            kd_barang: String(x.kd_barang),
-            nama_barang: String(x.nama_barang),
-            nama_satuan: x.nama_satuan ?? null,
-            jumlah: typeof x.jumlah === 'number' ? x.jumlah : Number(x.jumlah ?? 0),
-            keterangan: String(x.keterangan ?? ''),
-            nama_toko: String(x.nama_toko ?? ''),
-          }))
-          setRows(mapped)
-          setTotal(obj.total ?? 0)
+          data = JSON.parse(text)
         } catch (e) {
           console.error('JSON Parse Error:', text)
-          throw new Error('Invalid server response')
+          throw new Error('Invalid server response (Not JSON)')
         }
+        
+        if (data.error) throw new Error(data.error)
+        
+        const obj = data as InListResponse
+        const mapped: Row[] = (obj.rows ?? []).map((x) => ({
+          id: x.id,
+          transaksi_id: String(x.transaksi_id),
+          tanggal: new Date(x.tanggal).toISOString().slice(0, 10),
+          kd_barang: String(x.kd_barang),
+          nama_barang: String(x.nama_barang),
+          nama_satuan: x.nama_satuan ?? null,
+          jumlah: typeof x.jumlah === 'number' ? x.jumlah : Number(x.jumlah ?? 0),
+          keterangan: String(x.keterangan ?? ''),
+          nama_toko: String(x.nama_toko ?? ''),
+        }))
+        setRows(mapped)
+        setTotal(obj.total ?? 0)
       })
       .catch((e) => {
         if (controller.signal.aborted) return
