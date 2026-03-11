@@ -1,17 +1,8 @@
 import { NextResponse } from 'next/server'
-import { readFile } from 'fs/promises'
-import path from 'path'
 
-export async function GET() {
-  const filePath = path.join(process.cwd(), 'public', 'favicon.png')
-  const buf = await readFile(filePath)
-
-  return new NextResponse(buf, {
-    status: 200,
-    headers: {
-      'Content-Type': 'image/png',
-      'Cache-Control': 'public, max-age=31536000, immutable',
-    },
-  })
+export async function GET(req: Request) {
+  const url = new URL(req.url)
+  url.pathname = '/favicon.png'
+  url.searchParams.set('v', '2')
+  return NextResponse.redirect(url, 308)
 }
-
