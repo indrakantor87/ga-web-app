@@ -10,11 +10,11 @@ export const metadata: Metadata = {
   description: "General Affair Inventory Management System",
   icons: {
     icon: [
-      { url: '/favicon.ico' },
-      { url: '/favicon.png', type: 'image/png' },
+      { url: '/favicon.ico?v=2' },
+      { url: '/favicon.png?v=2', type: 'image/png' },
     ],
-    shortcut: ['/favicon.ico', '/favicon.png'],
-    apple: [{ url: '/favicon.png' }],
+    shortcut: ['/favicon.ico?v=2', '/favicon.png?v=2'],
+    apple: [{ url: '/apple-touch-icon.png?v=2' }],
   },
 };
 
@@ -26,9 +26,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" href="/favicon.png" type="image/png" sizes="32x32" />
-        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="icon" href="/favicon.ico?v=2" sizes="any" />
+        <link rel="icon" href="/favicon.png?v=2" type="image/png" sizes="32x32" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2" />
+        <link rel="shortcut icon" href="/favicon.ico?v=2" />
       </head>
       <body className={inter.className}>
         <ClientLayout>
