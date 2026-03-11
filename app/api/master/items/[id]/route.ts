@@ -20,8 +20,11 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
   const id_jenis = Number(body?.id_jenis ?? NaN)
   const id_satuan = Number(body?.id_satuan ?? NaN)
   const stok_minimum = Number(body?.stok_minimum ?? 0)
-  const foto = body?.foto != null && String(body.foto).trim() ? String(body.foto).trim() : null
+  let foto = body?.foto != null && String(body.foto).trim() ? String(body.foto).trim() : null
   const is_active = body?.is_active != null ? String(body.is_active) : undefined
+
+  if (foto && foto.startsWith('/uploads/')) foto = foto.slice('/uploads/'.length)
+  if (foto && foto.length > 100) foto = foto.slice(0, 100)
 
   if (!kd_barang || !nama_barang) return NextResponse.json({ error: 'Kode barang dan nama barang wajib diisi' }, { status: 400 })
   if (!Number.isFinite(harga) || harga < 0) return NextResponse.json({ error: 'Harga tidak valid' }, { status: 400 })

@@ -9,9 +9,12 @@ export const metadata: Metadata = {
   title: "GA Inventory - Perkasa Networks",
   description: "General Affair Inventory Management System",
   icons: {
-    icon: '/favicon.png', // Explicitly set favicon
-    shortcut: '/favicon.png',
-    apple: '/favicon.png',
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/favicon.png', type: 'image/png' },
+    ],
+    shortcut: ['/favicon.ico', '/favicon.png'],
+    apple: [{ url: '/favicon.png' }],
   },
 };
 
@@ -23,7 +26,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/favicon.png" type="image/png" sizes="32x32" />
+        <link rel="shortcut icon" href="/favicon.ico" />
       </head>
       <body className={inter.className}>
         <ClientLayout>

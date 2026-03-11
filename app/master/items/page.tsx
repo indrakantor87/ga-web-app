@@ -25,6 +25,18 @@ type ItemRow = {
 type CategoryOption = { id_jenis: number; nama_jenis: string; is_active: 'ONE' | 'ZERO' | 'EMPTY' }
 type UnitOption = { id_satuan: number; nama_satuan: string; is_active: 'ONE' | 'ZERO' }
 
+type ItemPayload = {
+  kd_barang: string
+  barcode: string
+  nama_barang: string
+  harga: number
+  id_jenis: number
+  id_satuan: number
+  stok_minimum: number
+  foto: string | null
+  stok?: number
+}
+
 function StatusBadge({ active }: { active: boolean }) {
   return (
     <span
@@ -195,23 +207,26 @@ export default function MasterItemsPage() {
       stok: '',
       foto: '',
     })
+    setFotoPreview(null)
     setModalOpen(true)
   }
 
   const openEdit = (row: ItemRow) => {
+    const fotoValue = row.foto ? String(row.foto).trim() : ''
+    const normalizedFoto = fotoValue.startsWith('/uploads/') ? fotoValue.slice('/uploads/'.length) : fotoValue
     setEditing(row)
     setForm({
       kd_barang: row.kd_barang,
       barcode: row.barcode,
       nama_barang: row.nama_barang,
-      harga: String(row.harga ?? ''),
+      harga: moneyId(String(row.harga ?? '')),
       id_jenis: String(row.id_jenis),
       id_satuan: String(row.id_satuan),
       stok_minimum: String(row.stok_minimum ?? 0),
       stok: String(row.stok ?? ''),
-      foto: row.foto ?? '',
+      foto: normalizedFoto,
     })
-    setFotoPreview(row.foto ? (row.foto.startsWith('http') || row.foto.startsWith('/') ? row.foto : `/uploads/${row.foto}`) : null)
+    setFotoPreview(row.foto ? resolveFotoSrc(row.foto) : null)
     setModalOpen(true)
   }
 
@@ -220,7 +235,7 @@ export default function MasterItemsPage() {
     setError(null)
     try {
       const hargaParsed = parseIdNumber(form.harga)
-      const payload: any = {
+      const payload: ItemPayload = {
         kd_barang: form.kd_barang.trim(),
         barcode: form.barcode.trim(),
         nama_barang: form.nama_barang.trim(),
@@ -232,6 +247,7 @@ export default function MasterItemsPage() {
       }
 
       if (!payload.kd_barang || !payload.nama_barang) throw new Error('Kode barang dan nama barang wajib diisi')
+      if (!payload.barcode) throw new Error('Barcode wajib diisi')
       if (!Number.isFinite(payload.harga) || payload.harga < 0) throw new Error('Harga tidak valid')
       if (!Number.isFinite(payload.id_jenis) || !Number.isFinite(payload.id_satuan)) throw new Error('Jenis dan satuan wajib dipilih')
       if (!Number.isFinite(payload.stok_minimum) || payload.stok_minimum < 0) throw new Error('Stok minimum tidak valid')
@@ -305,6 +321,19 @@ export default function MasterItemsPage() {
   const openImport = () => {
     setError(null)
     fileInputRef.current?.click()
+  }
+
+  const autoLinkPhotos = async () => {
+    setError(null)
+    try {
+      const r = await fetch('/api/master/items/photos/auto-link', { method: 'POST' })
+      const data = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(data?.error ?? 'Gagal auto isi foto')
+      await refresh()
+      alert(`Auto isi foto selesai. Terpasang: ${data?.linked ?? 0}, Tidak ketemu: ${data?.missing ?? 0}`)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e))
+    }
   }
 
   const normalizeHeader = (v: unknown) => String(v ?? '').trim().toUpperCase().replace(/\s+/g, ' ')
@@ -427,10 +456,12 @@ export default function MasterItemsPage() {
       const r = await fetch('/api/upload', { method: 'POST', body: fd })
       const data = await r.json()
       if (!r.ok) throw new Error(data?.error ?? 'Gagal upload')
-      setForm((p) => ({ ...p, foto: data.url }))
-      setFotoPreview(data.url)
-    } catch (err: any) {
-      setError(err.message || String(err))
+      const url = String(data?.url ?? '')
+      const filename = url.startsWith('/uploads/') ? url.slice('/uploads/'.length) : url
+      setForm((p) => ({ ...p, foto: filename }))
+      setFotoPreview(url || null)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
     } finally {
       e.target.value = ''
     }
@@ -464,6 +495,12 @@ export default function MasterItemsPage() {
           >
             <Upload className="h-4 w-4" />
             {importing ? 'Import...' : 'Import Excel'}
+          </button>
+          <button
+            onClick={autoLinkPhotos}
+            className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-black"
+          >
+            Auto Foto
           </button>
           <input
             ref={fileInputRef}
@@ -641,6 +678,15 @@ export default function MasterItemsPage() {
 
       <Modal open={modalOpen} title={editing ? 'Edit Data Barang' : 'Tambah Data Barang'} onClose={() => setModalOpen(false)}>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <label className="text-sm font-semibold text-gray-700">Nama Barang</label>
+            <input
+              value={form.nama_barang}
+              onChange={(e) => setForm((p) => ({ ...p, nama_barang: e.target.value }))}
+              className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              placeholder="Nama barang"
+            />
+          </div>
           <div>
             <label className="text-sm font-semibold text-gray-700">Kode Barang</label>
             <input
@@ -657,21 +703,12 @@ export default function MasterItemsPage() {
                 value={form.barcode}
                 onChange={(e) => setForm((p) => ({ ...p, barcode: e.target.value }))}
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-mono"
-                placeholder="8997..."
+                placeholder="Barcode"
               />
               <button onClick={generateBarcode} className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
                 Generate
               </button>
             </div>
-          </div>
-          <div className="md:col-span-2">
-            <label className="text-sm font-semibold text-gray-700">Nama Barang</label>
-            <input
-              value={form.nama_barang}
-              onChange={(e) => setForm((p) => ({ ...p, nama_barang: e.target.value }))}
-              className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              placeholder="Contoh: Klem 5 mm"
-            />
           </div>
           <div>
             <label className="text-sm font-semibold text-gray-700">Jenis</label>
@@ -704,15 +741,6 @@ export default function MasterItemsPage() {
             </select>
           </div>
           <div>
-            <label className="text-sm font-semibold text-gray-700">Harga</label>
-            <input
-              value={form.harga}
-              onChange={(e) => setForm((p) => ({ ...p, harga: e.target.value }))}
-              className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              placeholder="1750"
-            />
-          </div>
-          <div>
             <label className="text-sm font-semibold text-gray-700">Stok Minimum</label>
             <input
               value={form.stok_minimum}
@@ -733,6 +761,15 @@ export default function MasterItemsPage() {
             {editing && <p className="mt-1 text-xs text-gray-500">Stok hanya berubah dari transaksi masuk/keluar</p>}
           </div>
           <div className="md:col-span-2">
+            <label className="text-sm font-semibold text-gray-700">Harga</label>
+            <input
+              value={form.harga}
+              onChange={(e) => setForm((p) => ({ ...p, harga: e.target.value }))}
+              className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              placeholder="Rp 1.750"
+            />
+          </div>
+          <div className="md:col-span-2">
             <label className="text-sm font-semibold text-gray-700">Upload Foto</label>
             <div className="mt-2 flex items-center gap-3">
               <input type="file" accept="image/*" onChange={onFotoFile} className="block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
@@ -741,7 +778,11 @@ export default function MasterItemsPage() {
               <div className="mt-4">
                 <Image src={fotoPreview} alt="Preview" width={160} height={160} className="rounded-xl border border-gray-200 object-cover" unoptimized />
               </div>
-            ) : null}
+            ) : (
+              <div className="mt-4 h-40 w-40 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center text-xs text-gray-500">
+                No image
+              </div>
+            )}
           </div>
         </div>
         <div className="mt-6 flex items-center justify-end gap-2">
@@ -749,14 +790,14 @@ export default function MasterItemsPage() {
             onClick={() => setModalOpen(false)}
             className="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"
           >
-            Batal
+            Close
           </button>
           <button
             onClick={save}
             disabled={saving}
             className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60 hover:bg-indigo-700"
           >
-            {saving ? 'Menyimpan...' : 'Simpan'}
+            {saving ? 'Menyimpan...' : editing ? 'Simpan' : 'Tambah'}
           </button>
         </div>
       </Modal>
