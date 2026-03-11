@@ -346,16 +346,17 @@ export default function Page() {
       </div>
 
       {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4">
           <div className="absolute inset-0 bg-black/30" onClick={() => setModal(false)} />
-          <div className="relative w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl ring-1 ring-gray-200">
-            <div className="flex items-center justify-between">
+          <div className="relative w-full max-w-xl max-h-[calc(100vh-2rem)] rounded-2xl bg-white shadow-xl ring-1 ring-gray-200 flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
               <h3 className="text-lg font-bold text-gray-900">{editing ? 'Edit Barang Masuk' : 'Tambah Barang Masuk'}</h3>
               <button onClick={() => setModal(false)} className="rounded-lg px-2 py-1 text-sm font-semibold text-gray-600 hover:bg-gray-50">
                 Tutup
               </button>
             </div>
-            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="p-6 overflow-y-auto">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
                 <label className="text-sm font-semibold text-gray-700">Barang</label>
                 <Select
@@ -408,7 +409,8 @@ export default function Page() {
                 <input value={form.keterangan} onChange={(e) => setForm((p) => ({ ...p, keterangan: e.target.value }))} className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
               </div>
             </div>
-            <div className="mt-6 flex items-center justify-end gap-2">
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 shrink-0 flex items-center justify-end gap-2">
               <button onClick={() => setModal(false)} className="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50">
                 Batal
               </button>
