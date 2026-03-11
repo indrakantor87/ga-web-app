@@ -27,6 +27,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
   if (!Number.isFinite(harga) || harga < 0) return NextResponse.json({ error: 'Harga tidak valid' }, { status: 400 })
   if (!Number.isFinite(id_jenis) || !Number.isFinite(id_satuan)) return NextResponse.json({ error: 'Jenis dan satuan wajib dipilih' }, { status: 400 })
   if (!Number.isFinite(stok_minimum) || stok_minimum < 0) return NextResponse.json({ error: 'Stok minimum tidak valid' }, { status: 400 })
+  if (!barcode) return NextResponse.json({ error: 'Barcode wajib diisi' }, { status: 400 })
 
   await prisma.tbl_barang.update({
     where: { id_barang },

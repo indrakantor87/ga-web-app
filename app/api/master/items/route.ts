@@ -100,11 +100,14 @@ export async function POST(req: Request) {
   const stok_minimum = Number(body?.stok_minimum ?? 0)
   const foto = body?.foto != null && String(body.foto).trim() ? String(body.foto).trim() : null
   const is_active = String(body?.is_active ?? 'ONE')
+  const stok_init = Number(body?.stok ?? 0)
 
   if (!kd_barang || !nama_barang) return NextResponse.json({ error: 'Kode barang dan nama barang wajib diisi' }, { status: 400 })
   if (!Number.isFinite(harga) || harga < 0) return NextResponse.json({ error: 'Harga tidak valid' }, { status: 400 })
   if (!Number.isFinite(id_jenis) || !Number.isFinite(id_satuan)) return NextResponse.json({ error: 'Jenis dan satuan wajib dipilih' }, { status: 400 })
   if (!Number.isFinite(stok_minimum) || stok_minimum < 0) return NextResponse.json({ error: 'Stok minimum tidak valid' }, { status: 400 })
+  if (!barcode) return NextResponse.json({ error: 'Barcode wajib diisi' }, { status: 400 })
+  if (!Number.isFinite(stok_init) || stok_init < 0) return NextResponse.json({ error: 'Stok awal tidak valid' }, { status: 400 })
 
   const created = await prisma.tbl_barang.create({
     data: {
@@ -115,7 +118,7 @@ export async function POST(req: Request) {
       id_jenis,
       id_satuan,
       stok_minimum,
-      stok: 0,
+      stok: Math.trunc(stok_init) || 0,
       foto,
       is_active: is_active === 'ZERO' ? 'ZERO' : 'ONE',
     },

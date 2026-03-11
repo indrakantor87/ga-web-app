@@ -112,8 +112,10 @@ export default function MasterItemsPage() {
     id_jenis: '',
     id_satuan: '',
     stok_minimum: '',
+    stok: '',
     foto: '',
   })
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null)
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize])
 
@@ -190,6 +192,7 @@ export default function MasterItemsPage() {
       id_jenis: '',
       id_satuan: '',
       stok_minimum: '',
+      stok: '',
       foto: '',
     })
     setModalOpen(true)
@@ -205,8 +208,10 @@ export default function MasterItemsPage() {
       id_jenis: String(row.id_jenis),
       id_satuan: String(row.id_satuan),
       stok_minimum: String(row.stok_minimum ?? 0),
+      stok: String(row.stok ?? ''),
       foto: row.foto ?? '',
     })
+    setFotoPreview(row.foto ? (row.foto.startsWith('http') || row.foto.startsWith('/') ? row.foto : `/uploads/${row.foto}`) : null)
     setModalOpen(true)
   }
 
@@ -215,7 +220,7 @@ export default function MasterItemsPage() {
     setError(null)
     try {
       const hargaParsed = parseIdNumber(form.harga)
-      const payload = {
+      const payload: any = {
         kd_barang: form.kd_barang.trim(),
         barcode: form.barcode.trim(),
         nama_barang: form.nama_barang.trim(),
@@ -240,6 +245,10 @@ export default function MasterItemsPage() {
         const data = await r.json().catch(() => ({}))
         if (!r.ok) throw new Error(data?.error ?? 'Gagal menyimpan')
       } else {
+        const stokInit = Number(form.stok)
+        if (Number.isFinite(stokInit) && stokInit > 0) {
+          payload.stok = stokInit
+        }
         const r = await fetch('/api/master/items', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
@@ -401,6 +410,31 @@ export default function MasterItemsPage() {
 
   const activeCategories = useMemo(() => categories.filter((c) => c.is_active === 'ONE'), [categories])
   const activeUnits = useMemo(() => units.filter((u) => u.is_active === 'ONE'), [units])
+
+  const generateBarcode = () => {
+    const prefix = '899' // lokal style
+    let body = ''
+    for (let i = 0; i < 10; i++) body += Math.floor(Math.random() * 10)
+    setForm((p) => ({ ...p, barcode: `${prefix}${body}` }))
+  }
+
+  const onFotoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    const fd = new FormData()
+    fd.append('file', f)
+    try {
+      const r = await fetch('/api/upload', { method: 'POST', body: fd })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data?.error ?? 'Gagal upload')
+      setForm((p) => ({ ...p, foto: data.url }))
+      setFotoPreview(data.url)
+    } catch (err: any) {
+      setError(err.message || String(err))
+    } finally {
+      e.target.value = ''
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -618,12 +652,17 @@ export default function MasterItemsPage() {
           </div>
           <div>
             <label className="text-sm font-semibold text-gray-700">Barcode</label>
-            <input
-              value={form.barcode}
-              onChange={(e) => setForm((p) => ({ ...p, barcode: e.target.value }))}
-              className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-mono"
-              placeholder="8997..."
-            />
+            <div className="mt-2 flex gap-2">
+              <input
+                value={form.barcode}
+                onChange={(e) => setForm((p) => ({ ...p, barcode: e.target.value }))}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-mono"
+                placeholder="8997..."
+              />
+              <button onClick={generateBarcode} className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                Generate
+              </button>
+            </div>
           </div>
           <div className="md:col-span-2">
             <label className="text-sm font-semibold text-gray-700">Nama Barang</label>
@@ -682,14 +721,27 @@ export default function MasterItemsPage() {
               placeholder="10"
             />
           </div>
-          <div className="md:col-span-2">
-            <label className="text-sm font-semibold text-gray-700">Foto (opsional)</label>
+          <div>
+            <label className="text-sm font-semibold text-gray-700">Stok</label>
             <input
-              value={form.foto}
-              onChange={(e) => setForm((p) => ({ ...p, foto: e.target.value }))}
+              value={form.stok}
+              onChange={(e) => setForm((p) => ({ ...p, stok: e.target.value }))}
+              disabled={!!editing}
               className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              placeholder="Nama file / URL"
+              placeholder={editing ? String(editing.stok) : '0'}
             />
+            {editing && <p className="mt-1 text-xs text-gray-500">Stok hanya berubah dari transaksi masuk/keluar</p>}
+          </div>
+          <div className="md:col-span-2">
+            <label className="text-sm font-semibold text-gray-700">Upload Foto</label>
+            <div className="mt-2 flex items-center gap-3">
+              <input type="file" accept="image/*" onChange={onFotoFile} className="block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+            </div>
+            {fotoPreview ? (
+              <div className="mt-4">
+                <Image src={fotoPreview} alt="Preview" width={160} height={160} className="rounded-xl border border-gray-200 object-cover" unoptimized />
+              </div>
+            ) : null}
           </div>
         </div>
         <div className="mt-6 flex items-center justify-end gap-2">
