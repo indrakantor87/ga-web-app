@@ -7,6 +7,15 @@ function toInt(v: string | null, fallback: number) {
 }
 
 export async function GET(req: Request) {
+  await prisma.tbl_barang.updateMany({
+    where: {
+      stok: { lt: 0 },
+    },
+    data: {
+      stok: 0,
+    },
+  })
+
   const url = new URL(req.url)
   const q = (url.searchParams.get('q') ?? '').trim()
   const status = (url.searchParams.get('status') ?? 'all').toLowerCase()

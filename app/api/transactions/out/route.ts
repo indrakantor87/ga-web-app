@@ -134,24 +134,37 @@ export async function POST(req: Request) {
 
   const transaksi_id = await genTransId('BRG-KLR-', tanggal)
 
-  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    await tx.tbl_barang_keluar.create({
-      data: {
-        transaksi_id,
-        tanggal,
-        id_barang,
-        jumlah,
-        user_id,
-        keterangan,
-        teknisi,
-        is_active: 'ONE',
-      },
+  try {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.tbl_barang_keluar.create({
+        data: {
+          transaksi_id,
+          tanggal,
+          id_barang,
+          jumlah,
+          user_id,
+          keterangan,
+          teknisi,
+          is_active: 'ONE',
+        },
+      })
+
+      const updated = await tx.tbl_barang.updateMany({
+        where: { id_barang, stok: { gte: jumlah } },
+        data: { stok: { decrement: jumlah } },
+      })
+
+      if (updated.count === 0) {
+        throw new Error('Stok tidak mencukupi')
+      }
     })
-    await tx.tbl_barang.update({
-      where: { id_barang },
-      data: { stok: { decrement: jumlah } },
-    })
-  })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    if (message.toLowerCase().includes('stok tidak mencukupi')) {
+      return NextResponse.json({ error: 'Stok tidak mencukupi' }, { status: 400 })
+    }
+    throw error
+  }
 
   return NextResponse.json({ ok: true, transaksi_id })
 }

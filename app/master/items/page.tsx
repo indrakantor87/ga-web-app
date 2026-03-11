@@ -43,6 +43,12 @@ function moneyId(v: string) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n)
 }
 
+function parseIdNumber(input: string) {
+  const cleaned = input.replace(/[^\d]/g, '')
+  if (!cleaned) return NaN
+  return Number(cleaned)
+}
+
 function Modal({
   open,
   title,
@@ -205,11 +211,12 @@ export default function MasterItemsPage() {
     setSaving(true)
     setError(null)
     try {
+      const hargaParsed = parseIdNumber(form.harga)
       const payload = {
         kd_barang: form.kd_barang.trim(),
         barcode: form.barcode.trim(),
         nama_barang: form.nama_barang.trim(),
-        harga: Number(form.harga),
+        harga: hargaParsed,
         id_jenis: Number(form.id_jenis),
         id_satuan: Number(form.id_satuan),
         stok_minimum: Number(form.stok_minimum),
@@ -545,4 +552,3 @@ export default function MasterItemsPage() {
     </div>
   )
 }
-
