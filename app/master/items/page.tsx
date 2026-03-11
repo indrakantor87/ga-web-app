@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
-import { Pencil, Plus, Power } from 'lucide-react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import Image from 'next/image'
+import { Pencil, Plus, Power, Trash2, Upload } from 'lucide-react'
 import { clsx } from 'clsx'
 import * as XLSX from 'xlsx'
 
@@ -100,6 +101,8 @@ export default function MasterItemsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<ItemRow | null>(null)
   const [saving, setSaving] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const [form, setForm] = useState({
     kd_barang: '',
@@ -270,6 +273,117 @@ export default function MasterItemsPage() {
     await refresh()
   }
 
+  const removeRow = async (row: ItemRow) => {
+    if (!confirm(`Hapus data barang "${row.nama_barang}"?`)) return
+    const r = await fetch(`/api/master/items/${row.id_barang}`, { method: 'DELETE' })
+    const data = await r.json().catch(() => ({}))
+    if (!r.ok) {
+      setError(data?.error ?? 'Gagal menghapus')
+      return
+    }
+    await refresh()
+  }
+
+  const resolveFotoSrc = (v: string | null) => {
+    if (!v) return null
+    const s = String(v).trim()
+    if (!s) return null
+    if (s.startsWith('http://') || s.startsWith('https://')) return s
+    if (s.startsWith('/')) return s
+    return `/uploads/${s}`
+  }
+
+  const openImport = () => {
+    setError(null)
+    fileInputRef.current?.click()
+  }
+
+  const normalizeHeader = (v: unknown) => String(v ?? '').trim().toUpperCase().replace(/\s+/g, ' ')
+
+  const handleImportFile = async (file: File) => {
+    setImporting(true)
+    setError(null)
+    try {
+      const buf = await file.arrayBuffer()
+      const wb = XLSX.read(buf, { type: 'array' })
+      const sheetName = wb.SheetNames[0]
+      const ws = wb.Sheets[sheetName]
+      const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: '' })
+
+      if (!Array.isArray(json) || json.length === 0) throw new Error('File kosong / format tidak terbaca')
+
+      const catMap = new Map(activeCategories.map((c) => [c.nama_jenis.trim().toLowerCase(), c.id_jenis]))
+      const unitMap = new Map(activeUnits.map((u) => [u.nama_satuan.trim().toLowerCase(), u.id_satuan]))
+
+      const pick = (row: Record<string, unknown>, keys: string[]) => {
+        for (const k of keys) {
+          const found = Object.keys(row).find((rk) => normalizeHeader(rk) === k)
+          if (found) return row[found]
+        }
+        return undefined
+      }
+
+      const items = json.map((r) => {
+        const kd = String(pick(r, ['KD BARANG', 'KODE', 'KODE BARANG', 'KD_BARANG', 'KD_BARANG ']) ?? '').trim()
+        const barcode = String(pick(r, ['BARCODE']) ?? '').trim()
+        const nama = String(pick(r, ['NAMA BARANG', 'NAMA', 'NAMA_BARANG']) ?? '').trim()
+        const satuanName = String(pick(r, ['SATUAN']) ?? '').trim()
+        const jenisName = String(pick(r, ['JENIS']) ?? '').trim()
+        const hargaRaw = pick(r, ['HARGA', 'PRICE'])
+        const stokMinRaw = pick(r, ['STOKMINIMUM', 'STOK MINIMUM', 'STOK_MINIMUM', 'MIN']) ?? 0
+        const foto = String(pick(r, ['FOTO', 'PHOTO', 'GAMBAR']) ?? '').trim()
+
+        const id_jenis = catMap.get(jenisName.toLowerCase()) ?? NaN
+        const id_satuan = unitMap.get(satuanName.toLowerCase()) ?? NaN
+        const harga = typeof hargaRaw === 'number' ? hargaRaw : parseIdNumber(String(hargaRaw ?? ''))
+        const stok_minimum = typeof stokMinRaw === 'number' ? stokMinRaw : Number(String(stokMinRaw).replace(/[^\d]/g, '') || '0')
+
+        return {
+          kd_barang: kd,
+          barcode,
+          nama_barang: nama,
+          id_jenis,
+          id_satuan,
+          harga,
+          stok_minimum,
+          foto: foto ? foto : null,
+          is_active: 'ONE' as const,
+        }
+      })
+
+      const invalid = items.find(
+        (it) =>
+          !it.kd_barang ||
+          !it.barcode ||
+          !it.nama_barang ||
+          !Number.isFinite(it.id_jenis) ||
+          !Number.isFinite(it.id_satuan) ||
+          !Number.isFinite(it.harga) ||
+          it.harga < 0 ||
+          !Number.isFinite(it.stok_minimum) ||
+          it.stok_minimum < 0
+      )
+      if (invalid) {
+        throw new Error('Format kolom tidak sesuai / ada data kosong (KD BARANG, BARCODE, NAMA BARANG, SATUAN, JENIS, HARGA, STOKMINIMUM)')
+      }
+
+      const r = await fetch('/api/master/items/import', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ items }),
+      })
+      const data = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(data?.error ?? 'Gagal import')
+
+      await refresh()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setImporting(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   const exportCsv = () => {
     if (rows.length === 0) return
     const exportData = rows.map((r) => ({
@@ -309,6 +423,24 @@ export default function MasterItemsPage() {
           >
             Export Excel
           </button>
+          <button
+            onClick={openImport}
+            disabled={importing}
+            className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 disabled:opacity-60"
+          >
+            <Upload className="h-4 w-4" />
+            {importing ? 'Import...' : 'Import Excel'}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) handleImportFile(f)
+            }}
+          />
         </div>
       </div>
 
@@ -351,17 +483,19 @@ export default function MasterItemsPage() {
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full">
             <thead>
-              <tr className="border-b border-gray-100 text-left text-xs font-semibold text-gray-500">
-                <th className="py-3 pr-4">Kode</th>
-                <th className="py-3 pr-4">Barcode</th>
-                <th className="py-3 pr-4">Nama</th>
-                <th className="py-3 pr-4">Satuan</th>
-                <th className="py-3 pr-4">Jenis</th>
-                <th className="py-3 pr-4">Harga</th>
-                <th className="py-3 pr-4">Stok Minimum</th>
-                <th className="py-3 pr-4">Stok</th>
-                <th className="py-3 pr-4">Status</th>
-                <th className="py-3">Aksi</th>
+              <tr className="border-b border-gray-100 bg-sky-50 text-left text-[11px] font-bold text-slate-700">
+                <th className="py-3 pr-4 pl-3">#</th>
+                <th className="py-3 pr-4">KD BARANG</th>
+                <th className="py-3 pr-4">BARCODE</th>
+                <th className="py-3 pr-4">NAMA BARANG</th>
+                <th className="py-3 pr-4">SATUAN</th>
+                <th className="py-3 pr-4">JENIS</th>
+                <th className="py-3 pr-4">HARGA</th>
+                <th className="py-3 pr-4">STOKMINIMUM</th>
+                <th className="py-3 pr-4">STOK</th>
+                <th className="py-3 pr-4">FOTO</th>
+                <th className="py-3 pr-4">STATUS</th>
+                <th className="py-3">AKSI</th>
               </tr>
             </thead>
             <tbody className="text-sm text-gray-700">
@@ -378,10 +512,12 @@ export default function MasterItemsPage() {
                   </td>
                 </tr>
               ) : (
-                rows.map((row) => {
+                rows.map((row, idx) => {
                   const active = row.is_active === '1' || row.is_active === 'ONE'
+                  const fotoSrc = resolveFotoSrc(row.foto)
                   return (
                     <tr key={row.id_barang} className="border-b border-gray-50 last:border-0">
+                      <td className="py-3 pr-4 pl-3 text-center text-xs text-gray-500">{(page - 1) * pageSize + idx + 1}</td>
                       <td className="py-3 pr-4 font-mono text-xs text-gray-700">{row.kd_barang}</td>
                       <td className="py-3 pr-4 font-mono text-xs text-gray-700">{row.barcode}</td>
                       <td className="py-3 pr-4 font-semibold text-gray-900">{row.nama_barang}</td>
@@ -389,7 +525,23 @@ export default function MasterItemsPage() {
                       <td className="py-3 pr-4">{row.nama_jenis ?? '-'}</td>
                       <td className="py-3 pr-4 whitespace-nowrap">{moneyId(row.harga)}</td>
                       <td className="py-3 pr-4">{row.stok_minimum}</td>
-                      <td className="py-3 pr-4">{row.stok}</td>
+                      <td className={clsx('py-3 pr-4', row.stok < 0 ? 'font-bold text-rose-600' : '')}>{row.stok}</td>
+                      <td className="py-3 pr-4">
+                        <div className="flex items-center justify-center">
+                          {fotoSrc ? (
+                            <Image
+                              src={fotoSrc}
+                              alt="foto"
+                              width={32}
+                              height={32}
+                              className="h-8 w-8 rounded-full object-cover ring-1 ring-gray-200"
+                              unoptimized
+                            />
+                          ) : (
+                            <div className="h-8 w-8 rounded-full bg-gray-100 ring-1 ring-gray-200" />
+                          )}
+                        </div>
+                      </td>
                       <td className="py-3 pr-4">
                         <StatusBadge active={active} />
                       </td>
@@ -403,15 +555,22 @@ export default function MasterItemsPage() {
                             <Pencil className="h-4 w-4" />
                           </button>
                           <button
+                            onClick={() => removeRow(row)}
+                            className="inline-flex items-center justify-center rounded-lg bg-pink-600 px-2.5 py-2 text-white hover:bg-pink-700"
+                            title="Hapus"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                          <button
                             onClick={() => toggleActive(row)}
                             className={clsx(
                               'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-white',
-                              active ? 'bg-gray-900 hover:bg-black' : 'bg-emerald-600 hover:bg-emerald-700'
+                              active ? 'bg-orange-500 hover:bg-orange-600' : 'bg-emerald-600 hover:bg-emerald-700'
                             )}
                             title="Aktif / Nonaktif"
                           >
                             <Power className="h-4 w-4" />
-                            {active ? 'Nonaktif' : 'Aktifkan'}
+                            {active ? 'Nonaktif' : 'Aktif'}
                           </button>
                         </div>
                       </td>

@@ -58,3 +58,12 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   await prisma.tbl_barang.update({ where: { id_barang }, data: { is_active } })
   return NextResponse.json({ ok: true })
 }
+
+export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const { id } = await ctx.params
+  const id_barang = toInt(id)
+  if (!Number.isFinite(id_barang)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 })
+
+  await prisma.tbl_barang.update({ where: { id_barang }, data: { is_active: 'ZERO' } })
+  return NextResponse.json({ ok: true })
+}
