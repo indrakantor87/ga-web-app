@@ -2,6 +2,15 @@ import { NextResponse } from 'next/server'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 
+function candidateUploadRoots() {
+  const roots: string[] = []
+  roots.push(path.join(process.cwd(), 'public', 'uploads'))
+  const envDir = process.env.UPLOAD_DIR ? String(process.env.UPLOAD_DIR) : ''
+  if (envDir) roots.push(envDir)
+  roots.push(process.platform === 'win32' ? path.join(process.cwd(), 'tmp', 'uploads') : '/tmp/ga-web-app-uploads')
+  return Array.from(new Set(roots))
+}
+
 export async function POST(request: Request) {
   try {
     const data = await request.formData()
@@ -37,10 +46,19 @@ export async function POST(request: Request) {
       finalName = `${uniqueSuffix}-${baseSafe.slice(0, maxBase)}${ext}`
     }
 
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads')
-    await mkdir(uploadDir, { recursive: true })
-    const fullPath = path.join(uploadDir, finalName)
-    await writeFile(fullPath, buffer)
+    let lastErr: unknown = null
+    for (const uploadDir of candidateUploadRoots()) {
+      try {
+        await mkdir(uploadDir, { recursive: true })
+        const fullPath = path.join(uploadDir, finalName)
+        await writeFile(fullPath, buffer)
+        lastErr = null
+        break
+      } catch (e) {
+        lastErr = e
+      }
+    }
+    if (lastErr) throw lastErr
 
     return NextResponse.json({ success: true, url: `/uploads/${finalName}` })
   } catch (error) {

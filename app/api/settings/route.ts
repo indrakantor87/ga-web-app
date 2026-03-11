@@ -14,6 +14,15 @@ function safeExtFromName(name: string) {
   return ''
 }
 
+function candidateUploadRoots() {
+  const roots: string[] = []
+  roots.push(path.join(process.cwd(), 'public', 'uploads'))
+  const envDir = process.env.UPLOAD_DIR ? String(process.env.UPLOAD_DIR) : ''
+  if (envDir) roots.push(envDir)
+  roots.push(process.platform === 'win32' ? path.join(process.cwd(), 'tmp', 'uploads') : '/tmp/ga-web-app-uploads')
+  return Array.from(new Set(roots))
+}
+
 async function getOrCreateSettings() {
   const existing = await prisma.settings.findFirst({ orderBy: { id: 'asc' } })
   if (existing) return existing
@@ -60,11 +69,21 @@ export async function POST(req: Request) {
       const ext = safeExtFromName(logoFile.name)
       if (!ext) return NextResponse.json({ error: 'Format logo harus PNG/JPG/JPEG/WEBP' }, { status: 400 })
       const bytes = Buffer.from(await logoFile.arrayBuffer())
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'settings')
-      await mkdir(uploadDir, { recursive: true })
       const filename = `${randomUUID()}${ext}`
-      const full = path.join(uploadDir, filename)
-      await writeFile(full, bytes)
+      let lastErr: unknown = null
+      for (const root of candidateUploadRoots()) {
+        const uploadDir = path.join(root, 'settings')
+        try {
+          await mkdir(uploadDir, { recursive: true })
+          const full = path.join(uploadDir, filename)
+          await writeFile(full, bytes)
+          lastErr = null
+          break
+        } catch (e) {
+          lastErr = e
+        }
+      }
+      if (lastErr) throw lastErr
       logoPath = `/uploads/settings/${filename}`
     }
 
