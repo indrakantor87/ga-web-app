@@ -29,16 +29,6 @@ export const MENU_ITEMS: MenuItem[] = [
     icon: Home 
   },
   { 
-    label: 'Data Master', 
-    href: '#', 
-    icon: Database,
-    subItems: [
-      { label: 'Jenis Barang', href: '/master/categories' },
-      { label: 'Satuan', href: '/master/units' },
-      { label: 'Data Barang', href: '/master/items' },
-    ]
-  },
-  { 
     label: 'Transaksi', 
     href: '#', 
     icon: FileText,
@@ -56,6 +46,16 @@ export const MENU_ITEMS: MenuItem[] = [
       { label: 'Laporan Stok', href: '/reports/stock' },
       { label: 'Laporan Barang Masuk', href: '/reports/in' },
       { label: 'Laporan Barang Keluar', href: '/reports/out' },
+    ]
+  },
+  { 
+    label: 'Data Master', 
+    href: '#', 
+    icon: Database,
+    subItems: [
+      { label: 'Jenis Barang', href: '/master/categories' },
+      { label: 'Satuan', href: '/master/units' },
+      { label: 'Data Barang', href: '/master/items' },
     ]
   },
   { 

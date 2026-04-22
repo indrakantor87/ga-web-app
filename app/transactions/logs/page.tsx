@@ -108,7 +108,7 @@ export default function Page() {
         {error && <div className="mt-4 rounded-lg bg-rose-50 p-3 text-sm font-medium text-rose-700 ring-1 ring-rose-200">{error}</div>}
 
         <div className="mt-4 overflow-x-auto">
-          <table className="min-w-[860px]">
+          <table className="min-w-[860px] w-full">
             <thead>
               <tr className="border-b border-gray-100 text-left text-xs font-semibold text-gray-500">
                 <th className="py-3 pr-4">Tanggal</th>

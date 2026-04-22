@@ -552,7 +552,7 @@ export default function MasterItemsPage() {
         {error && <div className="mt-4 rounded-lg bg-rose-50 p-3 text-sm font-medium text-rose-700 ring-1 ring-rose-200">{error}</div>}
 
         <div className="mt-4 overflow-x-auto">
-          <table className="min-w-[1200px]">
+          <table className="min-w-[1200px] w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-sky-50 text-left text-[11px] font-bold text-slate-700">
                 <th className="py-3 pr-4 pl-3">#</th>
