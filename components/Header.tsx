@@ -6,11 +6,41 @@ import { useSidebar } from './SidebarContext'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+type CurrentUser = {
+  id: number
+  email: string
+  name: string
+  role: string
+} | null
+
 export function Header() {
   const { toggleSidebar } = useSidebar()
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const router = useRouter()
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const [currentUser, setCurrentUser] = useState<CurrentUser>(null)
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await fetch('/api/auth/me', { cache: 'no-store' })
+        if (!mounted) return
+        if (!res.ok) {
+          setCurrentUser(null)
+          return
+        }
+        const data = (await res.json()) as { user?: CurrentUser }
+        setCurrentUser(data?.user ?? null)
+      } catch {
+        if (!mounted) return
+        setCurrentUser(null)
+      }
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -76,11 +106,13 @@ export function Header() {
               className="flex items-center gap-2 hover:bg-gray-50 rounded-lg p-1.5 transition-colors"
             >
               <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">
-                D
+                {(currentUser?.name || currentUser?.email || 'U').charAt(0).toUpperCase()}
               </div>
               <div className="hidden md:block text-left">
-                <p className="text-xs font-bold text-gray-700">Developer</p>
-                <p className="text-[10px] text-gray-500">Admin</p>
+                <p className="text-xs font-bold text-gray-700">{currentUser?.name || 'User'}</p>
+                <p className="text-[10px] text-gray-500">
+                  {currentUser?.role ? currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1) : '-'}
+                </p>
               </div>
               <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -88,8 +120,8 @@ export function Header() {
             {isProfileOpen && (
               <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                 <div className="px-4 py-3 border-b border-gray-50">
-                  <p className="text-sm font-semibold text-gray-900">Developer</p>
-                  <p className="text-xs text-gray-500 truncate">developer@perkasa.net.id</p>
+                  <p className="text-sm font-semibold text-gray-900">{currentUser?.name || 'User'}</p>
+                  <p className="text-xs text-gray-500 truncate">{currentUser?.email || '-'}</p>
                 </div>
                 <Link 
                   href="/profile" 
