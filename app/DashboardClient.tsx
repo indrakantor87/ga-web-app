@@ -202,12 +202,17 @@ export default function DashboardClient({ data }: { data: DashboardData }) {
           const positive = kpi.delta >= 0
           const gradientId = `spark-${idx}`
           return (
-            <div key={kpi.title} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+            <div
+              key={kpi.title}
+              className={`rounded-2xl bg-white p-4 sm:p-5 shadow-sm ring-1 ring-gray-200 ${
+                idx === kpis.length - 1 ? 'col-span-2 md:col-span-1' : ''
+              }`}
+            >
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-semibold text-gray-500">{kpi.title}</p>
                   <div className="mt-2 flex items-end gap-3">
-                    <p className="text-3xl font-bold tracking-tight text-gray-900">{kpi.value}</p>
+                    <p className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">{kpi.value}</p>
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
                         positive ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
@@ -218,11 +223,11 @@ export default function DashboardClient({ data }: { data: DashboardData }) {
                     </span>
                   </div>
                 </div>
-                <div className={`rounded-xl p-3 text-white ${kpi.accent}`}>
+                <div className={`rounded-xl p-2.5 sm:p-3 text-white ${kpi.accent}`}>
                   <Icon className="h-5 w-5" />
                 </div>
               </div>
-              <div className="mt-4 h-14">
+              <div className="mt-3 sm:mt-4 h-12 sm:h-14">
                 <Spark data={data.spark} gradientId={gradientId} />
               </div>
             </div>
