@@ -48,16 +48,14 @@ export function Header() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsProfileOpen(false)
-      }
-      if (navRef.current && !navRef.current.contains(event.target as Node)) {
-        setOpenMenus({})
-      }
-      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
-        setIsMobileMenuOpen(false)
-        setOpenMenus({})
-      }
+      const target = event.target as Node
+      const isInProfile = Boolean(dropdownRef.current?.contains(target))
+      const isInNav = Boolean(navRef.current?.contains(target))
+      const isInMobileMenu = Boolean(mobileMenuRef.current?.contains(target))
+
+      if (!isInProfile) setIsProfileOpen(false)
+      if (!isInNav && !isInMobileMenu) setOpenMenus({})
+      if (!isInMobileMenu) setIsMobileMenuOpen(false)
     }
     document.addEventListener("mousedown", handleClickOutside)
     return () => {
