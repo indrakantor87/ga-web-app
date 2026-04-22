@@ -231,7 +231,7 @@ export default function DashboardClient({ data }: { data: DashboardData }) {
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200 xl:col-span-2 flex flex-col h-[400px]">
+        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200 xl:col-span-2 flex flex-col h-[320px] sm:h-[400px]">
           <div className="flex items-center justify-between flex-shrink-0">
             <div>
               <h3 className="text-sm font-bold text-gray-900">Grafik Transaksi</h3>
@@ -243,7 +243,7 @@ export default function DashboardClient({ data }: { data: DashboardData }) {
           </div>
         </div>
 
-        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200 flex flex-col h-[400px]">
+        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200 flex flex-col h-[320px] sm:h-[400px]">
           <div className="flex items-center justify-between flex-shrink-0">
             <div>
               <h3 className="text-sm font-bold text-gray-900">Persediaan Kritis</h3>
@@ -274,4 +274,3 @@ export default function DashboardClient({ data }: { data: DashboardData }) {
     </div>
   )
 }
-

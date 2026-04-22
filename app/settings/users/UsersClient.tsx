@@ -86,16 +86,19 @@ export default function UsersClient({ initialUsers }: { initialUsers: User[] }) 
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-800">Manajemen User</h1>
-        <button onClick={handleNew} className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
+        <button
+          onClick={handleNew}
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 w-full sm:w-auto"
+        >
           <Plus size={18} /> Tambah User
         </button>
       </div>
 
       {(isNew || editing) && (
-        <div className="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold">{isNew ? 'Tambah User Baru' : 'Edit User'}</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <input className="rounded-lg border p-2" placeholder="Nama Lengkap" value={form.firstname} onChange={(e) => setForm({ ...form, firstname: e.target.value })} />
@@ -117,8 +120,11 @@ export default function UsersClient({ initialUsers }: { initialUsers: User[] }) 
               <option value="nonaktif">Nonaktif</option>
             </select>
           </div>
-          <div className="mt-4 flex gap-2">
-            <button onClick={handleSave} className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700">
+          <div className="mt-4 flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={handleSave}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700 w-full sm:w-auto"
+            >
               <Save size={18} /> Simpan
             </button>
             <button
@@ -126,7 +132,7 @@ export default function UsersClient({ initialUsers }: { initialUsers: User[] }) 
                 setIsNew(false)
                 setEditing(null)
               }}
-              className="flex items-center gap-2 rounded-lg bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-500 px-4 py-2 text-white hover:bg-gray-600 w-full sm:w-auto"
             >
               <X size={18} /> Batal
             </button>
@@ -134,15 +140,15 @@ export default function UsersClient({ initialUsers }: { initialUsers: User[] }) 
         </div>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-        <table className="w-full text-left text-sm text-gray-600">
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+        <table className="min-w-[720px] w-full text-left text-sm text-gray-600">
           <thead className="bg-gray-50 text-gray-900">
             <tr>
-              <th className="px-6 py-3 font-medium">Nama</th>
-              <th className="px-6 py-3 font-medium">Email</th>
-              <th className="px-6 py-3 font-medium">Level</th>
-              <th className="px-6 py-3 font-medium">Status</th>
-              <th className="px-6 py-3 text-right font-medium">Aksi</th>
+              <th className="px-4 sm:px-6 py-3 font-medium">Nama</th>
+              <th className="px-4 sm:px-6 py-3 font-medium">Email</th>
+              <th className="px-4 sm:px-6 py-3 font-medium">Level</th>
+              <th className="px-4 sm:px-6 py-3 font-medium">Status</th>
+              <th className="px-4 sm:px-6 py-3 text-right font-medium">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -155,13 +161,13 @@ export default function UsersClient({ initialUsers }: { initialUsers: User[] }) 
             ) : (
               users.map((user) => (
                 <tr key={user.user_id} className="hover:bg-gray-50">
-                  <td className="px-6 py-3 font-medium text-gray-900">{user.firstname}</td>
-                  <td className="px-6 py-3">{user.email}</td>
-                  <td className="px-6 py-3 capitalize">{user.level}</td>
-                  <td className="px-6 py-3">
+                  <td className="px-4 sm:px-6 py-3 font-medium text-gray-900">{user.firstname}</td>
+                  <td className="px-4 sm:px-6 py-3">{user.email}</td>
+                  <td className="px-4 sm:px-6 py-3 capitalize">{user.level}</td>
+                  <td className="px-4 sm:px-6 py-3">
                     <span className={`rounded-full px-2 py-1 text-xs font-semibold ${user.status === 'aktif' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{user.status}</span>
                   </td>
-                  <td className="px-6 py-3 text-right">
+                  <td className="px-4 sm:px-6 py-3 text-right">
                     <button onClick={() => handleEdit(user)} className="mr-2 text-blue-600 hover:text-blue-800">
                       <Edit size={18} />
                     </button>
@@ -178,4 +184,3 @@ export default function UsersClient({ initialUsers }: { initialUsers: User[] }) 
     </div>
   )
 }
-

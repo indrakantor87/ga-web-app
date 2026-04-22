@@ -238,19 +238,25 @@ export default function Page() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Barang Masuk</h2>
           <p className="text-sm text-gray-500">Data barang masuk</p>
         </div>
-        <div className="flex items-center gap-2">
-        <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700">
-          <Plus className="h-4 w-4" />
-          Tambah Data
-        </button>
-        <button onClick={exportExcel} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
-          Export Excel
-        </button>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+          <button
+            onClick={openAdd}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 w-full sm:w-auto"
+          >
+            <Plus className="h-4 w-4" />
+            Tambah Data
+          </button>
+          <button
+            onClick={exportExcel}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 w-full sm:w-auto"
+          >
+            Export Excel
+          </button>
         </div>
       </div>
 
@@ -275,7 +281,7 @@ export default function Page() {
         {error && <div className="mt-4 rounded-lg bg-rose-50 p-3 text-sm font-medium text-rose-700 ring-1 ring-rose-200">{error}</div>}
 
         <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full">
+          <table className="min-w-[960px]">
             <thead>
               <tr className="border-b border-gray-100 text-left text-xs font-semibold text-gray-500">
                 <th className="py-3 pr-4">ID Transaksi</th>
@@ -292,13 +298,13 @@ export default function Page() {
             <tbody className="text-sm text-gray-700">
               {loading ? (
                 <tr>
-                  <td className="py-6 text-center text-gray-500" colSpan={7}>
+                  <td className="py-6 text-center text-gray-500" colSpan={9}>
                     Loading...
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td className="py-6 text-center text-gray-500" colSpan={7}>
+                  <td className="py-6 text-center text-gray-500" colSpan={9}>
                     Tidak ada data.
                   </td>
                 </tr>
@@ -330,11 +336,9 @@ export default function Page() {
           </table>
         </div>
 
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-          <div>
-            Page {page} / {totalPages} · Total {total}
-          </div>
-          <div className="flex items-center gap-2">
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-sm text-gray-600">
+          <div>Page {page} / {totalPages} · Total {total}</div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold disabled:opacity-50">
               Previous
             </button>

@@ -108,7 +108,7 @@ export default function Page() {
         {error && <div className="mt-4 rounded-lg bg-rose-50 p-3 text-sm font-medium text-rose-700 ring-1 ring-rose-200">{error}</div>}
 
         <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full">
+          <table className="min-w-[860px]">
             <thead>
               <tr className="border-b border-gray-100 text-left text-xs font-semibold text-gray-500">
                 <th className="py-3 pr-4">Tanggal</th>
@@ -154,11 +154,9 @@ export default function Page() {
           </table>
         </div>
 
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-          <div>
-            Page {page} / {totalPages} · Total {total}
-          </div>
-          <div className="flex items-center gap-2">
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-sm text-gray-600">
+          <div>Page {page} / {totalPages} · Total {total}</div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold disabled:opacity-50">
               Previous
             </button>
