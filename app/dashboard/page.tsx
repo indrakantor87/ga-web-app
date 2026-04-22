@@ -1,3 +1,5 @@
-export { default } from '../page'
-export { dynamic } from '../page'
+export const dynamic = 'force-dynamic'
 
+import Dashboard from '../page'
+
+export default Dashboard
