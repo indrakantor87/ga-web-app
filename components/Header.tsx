@@ -56,6 +56,7 @@ export function Header() {
       }
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
         setIsMobileMenuOpen(false)
+        setOpenMenus({})
       }
     }
     document.addEventListener("mousedown", handleClickOutside)
@@ -87,6 +88,107 @@ export function Header() {
         <Link href="/dashboard" className="flex items-center gap-3 shrink-0">
           <img src="/logo-perkasa-new.png" alt="Perkasa Networks" className="h-9 sm:h-11 w-auto object-contain" />
         </Link>
+
+        <div className="relative lg:hidden" ref={mobileMenuRef}>
+          <button
+            onClick={() =>
+              setIsMobileMenuOpen((v) => {
+                const next = !v
+                if (!next) setOpenMenus({})
+                return next
+              })
+            }
+            className="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 hover:bg-gray-50 ring-1 ring-gray-200"
+            aria-label="Menu"
+            aria-haspopup="menu"
+            aria-expanded={isMobileMenuOpen}
+          >
+            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+
+          {isMobileMenuOpen && (
+            <>
+              <div
+                className="fixed inset-0 top-16 z-40 bg-black/10"
+                onClick={() => {
+                  setIsMobileMenuOpen(false)
+                  setOpenMenus({})
+                }}
+              />
+              <div className="fixed left-3 right-3 top-16 z-50 mt-2 max-h-[calc(100vh-5rem)] overflow-y-auto bg-white rounded-2xl shadow-xl border border-gray-100">
+                <div className="p-2">
+                  {MENU_ITEMS.map((item) => {
+                    const Icon = item.icon
+                    if (item.subItems?.length) {
+                      const isAnyActive = item.subItems.some((s) => pathname === s.href || pathname.startsWith(`${s.href}/`))
+                      const isOpen = Boolean(openMenus[item.label])
+                      return (
+                        <div key={item.label} className="mb-1">
+                          <button
+                            onClick={() => toggleMenuGroup(item.label)}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                              isAnyActive ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            <span className="flex items-center gap-3">
+                              <Icon className={`w-5 h-5 ${isAnyActive ? 'text-indigo-600' : 'text-gray-400'}`} />
+                              {item.label}
+                            </span>
+                            {isOpen ? (
+                              <ChevronDown className="w-4 h-4 text-gray-400" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4 text-gray-400" />
+                            )}
+                          </button>
+                          {isOpen && (
+                            <div className="mt-1 ml-7 pl-3 border-l border-gray-100 space-y-1">
+                              {item.subItems.map((sub) => {
+                                const isSubActive = pathname === sub.href || pathname.startsWith(`${sub.href}/`)
+                                return (
+                                  <Link
+                                    key={sub.href}
+                                    href={sub.href}
+                                    className={`block px-3 py-2 rounded-lg text-sm transition-colors ${
+                                      isSubActive ? 'bg-indigo-50/60 text-indigo-700 font-medium' : 'text-gray-700 hover:bg-gray-50'
+                                    }`}
+                                    onClick={() => {
+                                      setIsMobileMenuOpen(false)
+                                      setOpenMenus({})
+                                    }}
+                                  >
+                                    {sub.label}
+                                  </Link>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    }
+
+                    const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                          isActive ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                        onClick={() => {
+                          setIsMobileMenuOpen(false)
+                          setOpenMenus({})
+                        }}
+                      >
+                        <Icon className={`w-5 h-5 ${isActive ? 'text-indigo-600' : 'text-gray-400'}`} />
+                        {item.label}
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
 
         <div className="hidden lg:flex items-center gap-1 whitespace-nowrap" ref={navRef}>
           {MENU_ITEMS.map((item) => {
@@ -153,92 +255,6 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="relative lg:hidden" ref={mobileMenuRef}>
-          <button
-            onClick={() => setIsMobileMenuOpen((v) => !v)}
-            className="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 hover:bg-gray-50 ring-1 ring-gray-200"
-            aria-label="Menu"
-            aria-haspopup="menu"
-            aria-expanded={isMobileMenuOpen}
-          >
-            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-
-          {isMobileMenuOpen && (
-            <div className="absolute right-0 top-full mt-2 w-[calc(100vw-1.5rem)] max-w-sm bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50">
-              <div className="p-2">
-                {MENU_ITEMS.map((item) => {
-                  const Icon = item.icon
-                  if (item.subItems?.length) {
-                    const isAnyActive = item.subItems.some((s) => pathname === s.href || pathname.startsWith(`${s.href}/`))
-                    const isOpen = Boolean(openMenus[item.label])
-                    return (
-                      <div key={item.label} className="mb-1">
-                        <button
-                          onClick={() => toggleMenuGroup(item.label)}
-                          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                            isAnyActive ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          <span className="flex items-center gap-3">
-                            <Icon className={`w-5 h-5 ${isAnyActive ? 'text-indigo-600' : 'text-gray-400'}`} />
-                            {item.label}
-                          </span>
-                          {isOpen ? (
-                            <ChevronDown className="w-4 h-4 text-gray-400" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4 text-gray-400" />
-                          )}
-                        </button>
-                        {isOpen && (
-                          <div className="mt-1 ml-7 pl-3 border-l border-gray-100 space-y-1">
-                            {item.subItems.map((sub) => {
-                              const isSubActive = pathname === sub.href || pathname.startsWith(`${sub.href}/`)
-                              return (
-                                <Link
-                                  key={sub.href}
-                                  href={sub.href}
-                                  className={`block px-3 py-2 rounded-lg text-sm transition-colors ${
-                                    isSubActive ? 'bg-indigo-50/60 text-indigo-700 font-medium' : 'text-gray-700 hover:bg-gray-50'
-                                  }`}
-                                  onClick={() => {
-                                    setIsMobileMenuOpen(false)
-                                    setOpenMenus({})
-                                  }}
-                                >
-                                  {sub.label}
-                                </Link>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  }
-
-                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                        isActive ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                      onClick={() => {
-                        setIsMobileMenuOpen(false)
-                        setOpenMenus({})
-                      }}
-                    >
-                      <Icon className={`w-5 h-5 ${isActive ? 'text-indigo-600' : 'text-gray-400'}`} />
-                      {item.label}
-                    </Link>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-
         <div className="relative pl-2 border-l border-gray-200 ml-2" ref={dropdownRef}>
           <button 
             onClick={() => setIsProfileOpen(!isProfileOpen)}

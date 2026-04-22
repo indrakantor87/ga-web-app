@@ -196,13 +196,13 @@ export default function DashboardClient({ data }: { data: DashboardData }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="flex gap-4 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 xl:grid-cols-5">
         {kpis.map((kpi, idx) => {
           const Icon = kpi.icon
           const positive = kpi.delta >= 0
           const gradientId = `spark-${idx}`
           return (
-            <div key={kpi.title} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+            <div key={kpi.title} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-200 min-w-[260px] shrink-0 sm:min-w-0 sm:shrink">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-semibold text-gray-500">{kpi.title}</p>
