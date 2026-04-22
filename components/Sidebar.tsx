@@ -15,16 +15,14 @@ import { usePathname } from 'next/navigation'
 import { clsx } from 'clsx'
 import { useSidebar } from './SidebarContext'
 
-import Image from 'next/image'
-
-type MenuItem = {
+export type MenuItem = {
   label: string
   href: string
   icon: React.ElementType
   subItems?: { label: string; href: string }[]
 }
 
-const MENU_ITEMS: MenuItem[] = [
+export const MENU_ITEMS: MenuItem[] = [
   { 
     label: 'Dashboard', 
     href: '/', 
