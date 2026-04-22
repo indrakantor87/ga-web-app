@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useMemo, useState, useRef, useEffect } from 'react'
-import { Bell, Search, User, LogOut, ChevronDown, ChevronRight } from 'lucide-react'
+import { User, LogOut, ChevronDown, ChevronRight } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { MENU_ITEMS } from '@/components/Sidebar'
@@ -88,20 +88,11 @@ export function Header() {
 
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-10">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logo-perkasa-new.png"
-            alt="Perkasa Networks"
-            className="h-10 w-auto object-contain"
-          />
-          <div className="hidden sm:flex flex-col">
-            <span className="font-bold text-lg text-indigo-900 leading-tight">Inventory</span>
-            <span className="text-xs text-gray-500 font-medium">Perkasa Networks</span>
-          </div>
-        </div>
+      <Link href="/dashboard" className="flex items-center gap-3 shrink-0">
+        <img src="/logo-perkasa-new.png" alt="Perkasa Networks" className="h-11 w-auto object-contain" />
+      </Link>
 
+      <div className="flex items-center gap-3 flex-1 justify-end">
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setIsMenuOpen((v) => !v)}
@@ -114,7 +105,7 @@ export function Header() {
           </button>
 
           {isMenuOpen && (
-            <div className="absolute left-0 top-full mt-2 w-72 bg-white rounded-xl shadow-lg border border-gray-100 py-2 overflow-hidden">
+            <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-100 py-2 overflow-hidden">
               <nav className="px-2">
                 {MENU_ITEMS.map((item) => {
                   const Icon = item.icon
@@ -181,65 +172,47 @@ export function Header() {
             </div>
           )}
         </div>
-      </div>
 
-      <div className="flex items-center gap-4">
-        <div className="hidden md:flex items-center bg-gray-50 rounded-lg px-3 py-2 w-48 md:w-80">
-          <Search className="w-5 h-5 text-gray-400 mr-2" />
-          <input 
-            type="text" 
-            placeholder="Search here..." 
-            className="bg-transparent border-none outline-none text-sm w-full text-gray-600 placeholder-gray-400"
-          />
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Notifications">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 inline-flex h-2 w-2 rounded-full bg-rose-600 ring-2 ring-white"></span>
+        <div className="relative pl-2 border-l border-gray-200 ml-2" ref={dropdownRef}>
+          <button 
+            onClick={() => setIsProfileOpen(!isProfileOpen)}
+            className="flex items-center gap-2 hover:bg-gray-50 rounded-lg p-1.5 transition-colors"
+          >
+            <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">
+              {(currentUser?.name || currentUser?.email || 'U').charAt(0).toUpperCase()}
+            </div>
+            <div className="hidden md:block text-left">
+              <p className="text-xs font-bold text-gray-700">{currentUser?.name || 'User'}</p>
+              <p className="text-[10px] text-gray-500">
+                {currentUser?.role ? currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1) : '-'}
+              </p>
+            </div>
+            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
           </button>
 
-          <div className="relative pl-2 border-l border-gray-200 ml-2" ref={dropdownRef}>
-            <button 
-              onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className="flex items-center gap-2 hover:bg-gray-50 rounded-lg p-1.5 transition-colors"
-            >
-              <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">
-                {(currentUser?.name || currentUser?.email || 'U').charAt(0).toUpperCase()}
+          {isProfileOpen && (
+            <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+              <div className="px-4 py-3 border-b border-gray-50">
+                <p className="text-sm font-semibold text-gray-900">{currentUser?.name || 'User'}</p>
+                <p className="text-xs text-gray-500 truncate">{currentUser?.email || '-'}</p>
               </div>
-              <div className="hidden md:block text-left">
-                <p className="text-xs font-bold text-gray-700">{currentUser?.name || 'User'}</p>
-                <p className="text-[10px] text-gray-500">
-                  {currentUser?.role ? currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1) : '-'}
-                </p>
-              </div>
-              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {isProfileOpen && (
-              <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-                <div className="px-4 py-3 border-b border-gray-50">
-                  <p className="text-sm font-semibold text-gray-900">{currentUser?.name || 'User'}</p>
-                  <p className="text-xs text-gray-500 truncate">{currentUser?.email || '-'}</p>
-                </div>
-                <Link 
-                  href="/profile" 
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                  onClick={() => setIsProfileOpen(false)}
-                >
-                  <User className="w-4 h-4" />
-                  Profile
-                </Link>
-                <button 
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Logout
-                </button>
-              </div>
-            )}
-          </div>
+              <Link 
+                href="/profile" 
+                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                onClick={() => setIsProfileOpen(false)}
+              >
+                <User className="w-4 h-4" />
+                Profile
+              </Link>
+              <button 
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>
